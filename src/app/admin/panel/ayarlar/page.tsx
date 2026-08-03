@@ -8,6 +8,7 @@ import Image from "next/image";
 import { toast, dismissToast } from "@/components/Toast";
 import { SiteSettings } from "@/types/settings";
 import { siteConfig } from "@/lib/site-config";
+import { updateSiteSettingsAction } from "@/lib/actions/car-actions";
 
 // Görsel WebP sıkıştırma yardımcı fonksiyonu
 const compressImage = (file: File, maxWidth = 1200): Promise<Blob> => {
@@ -169,7 +170,6 @@ export default function SiteAyarlariPage() {
       }
 
       const guncelVeri = {
-        id: 1,
         name: form.name,
         tagline: form.tagline,
         description: form.description,
@@ -186,12 +186,11 @@ export default function SiteAyarlariPage() {
         working_hours_weekend: form.working_hours_weekend,
         logo_url: guncelLogoUrl,
         banner_url: guncelBannerUrl,
-        updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from("site_settings").upsert(guncelVeri);
+      const res = await updateSiteSettingsAction(guncelVeri);
 
-      if (error) throw new Error("Ayarlar kaydedilemedi: " + error.message);
+      if (!res.success) throw new Error(res.error);
 
       dismissToast(loadingId as string);
       toast("✅ Site ayarları başarıyla güncellendi!", "success");

@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { toast, dismissToast } from "@/components/Toast";
 import { DONANIM_LISTESI } from "@/types/car";
+import { updateCarDatabaseAction } from "@/lib/actions/car-actions";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MAX_IMAGES = 15;
@@ -225,34 +226,22 @@ export default function Duzenle() {
     const loadingId = toast("Değişiklikler kaydediliyor...", "loading", 0);
 
     try {
-      for (const imageId of deletedImageIds) {
-        const item = gallery.find((g) => g.id === imageId);
-        if (item) {
-          const path = storagePathFromUrl(item.image_url);
-          if (path) await supabase.storage.from("car-images").remove([path]);
-          await supabase.from("car_images").delete().eq("id", imageId);
-        }
-      }
-
+      // 1. Yeni fotoğrafları storage'a yükle (anon client ile)
       const yuklenenUrl: string[] = [];
       for (const file of newFiles) {
-        const url = await uploadFile(file);
-        yuklenenUrl.push(url);
+        const compressedBlob = await compressImage(file);
+        const temizIsim = file.name.replace(/[^a-zA-Z0-9.]/g, "_").toLowerCase();
+        const isim = `${Date.now()}-${Math.floor(Math.random() * 1000)}-${temizIsim}.webp`;
+        const { error: uploadError } = await supabase.storage
+          .from("car-images")
+          .upload(isim, compressedBlob, { contentType: "image/webp" });
+        if (uploadError) throw new Error("Resim yükleme hatası: " + uploadError.message);
+        const { data } = supabase.storage.from("car-images").getPublicUrl(isim);
+        yuklenenUrl.push(data.publicUrl);
       }
 
+      // 2. Kapak URL hesapla
       const kalanGaleri = gallery.filter((g) => !deletedImageIds.includes(g.id));
-
-      if (yuklenenUrl.length > 0) {
-        const startOrder = kalanGaleri.reduce((m, g) => Math.max(m, g.sort_order), -1) + 1;
-        const rows = yuklenenUrl.map((url, index) => ({
-          car_id: Number(id),
-          image_url: url,
-          sort_order: startOrder + index,
-        }));
-        const { error: imgErr } = await supabase.from("car_images").insert(rows);
-        if (imgErr) console.error("Galeri ekleme uyarısı:", imgErr.message);
-      }
-
       let yeniKapak = kapakUrl;
       if (!yeniKapak) {
         if (kalanGaleri.length > 0) yeniKapak = kalanGaleri[0].image_url;
@@ -260,32 +249,34 @@ export default function Duzenle() {
         else yeniKapak = form.resim;
       }
 
-      const guncelVeri = {
-        marka: form.marka,
-        model: form.model,
-        yil: Number(form.yil) || null,
-        km: Number(form.km) || 0,
-        yakit: form.yakit,
-        vites: form.vites,
-        fiyat: Number(form.fiyat) || 0,
-        resim: yeniKapak,
-        durum: form.durum,
-        tramer: form.tramer,
-        aciklama: form.aciklama,
-        vitrin: form.vitrin,
-        donanim: secilenDonanim,
-      };
+      // 3. DB işlemleri server action ile
+      const result = await updateCarDatabaseAction(
+        Number(id),
+        {
+          marka: form.marka,
+          model: form.model,
+          yil: Number(form.yil) || null,
+          km: Number(form.km) || 0,
+          yakit: form.yakit,
+          vites: form.vites,
+          fiyat: Number(form.fiyat) || 0,
+          resim: yeniKapak,
+          durum: form.durum,
+          tramer: form.tramer,
+          aciklama: form.aciklama,
+          vitrin: form.vitrin,
+          donanim: secilenDonanim,
+        },
+        yuklenenUrl,
+        deletedImageIds
+      );
 
-      const { error } = await supabase.from("cars").update(guncelVeri).eq("id", id);
-      if (error) throw new Error("Güncelleme başarısız: " + error.message);
+      if (!result.success) throw new Error(result.error);
 
       newBlobUrls.forEach((u) => URL.revokeObjectURL(u));
-
       dismissToast(loadingId as string);
       toast("✅ Araç başarıyla güncellendi!", "success");
-      setTimeout(() => {
-        window.location.href = "/admin/panel";
-      }, 1000);
+      setTimeout(() => { window.location.href = "/admin/panel"; }, 1000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Bilinmeyen hata";
       dismissToast(loadingId as string);

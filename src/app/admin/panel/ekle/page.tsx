@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast, dismissToast } from "@/components/Toast";
 import { DONANIM_LISTESI } from "@/types/car";
+import { createCarDatabaseAction } from "@/lib/actions/car-actions";
 
 // Görselleri kalitesini bozmadan tarayıcıda WebP formatına sıkıştıran yardımcı fonksiyon
 const compressImage = (file: File): Promise<Blob> => {
@@ -129,8 +130,8 @@ export default function YeniAracEkle() {
     const loadingId = toast("Fotoğraflar optimize ediliyor ve ilan yükleniyor...", "loading", 0);
 
     try {
+      // 1. Fotoğrafları Storage'a yükle (anon client ile - storage herkese açık)
       const yuklenen: string[] = [];
-
       for (const file of files) {
         const compressedBlob = await compressImage(file);
         const temizIsim = file.name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
@@ -140,17 +141,15 @@ export default function YeniAracEkle() {
           .from("car-images")
           .upload(isim, compressedBlob, { contentType: "image/webp" });
 
-        if (uploadError) {
-          throw new Error(`Resim yükleme hatası: ${uploadError.message}`);
-        }
+        if (uploadError) throw new Error(`Resim yükleme hatası: ${uploadError.message}`);
 
         const { data } = supabase.storage.from("car-images").getPublicUrl(isim);
         yuklenen.push(data.publicUrl);
       }
 
-      const { data: car, error: carError } = await supabase
-        .from("cars")
-        .insert({
+      // 2. Veritabanına kaydet (server action ile - service role key kullanır)
+      const result = await createCarDatabaseAction(
+        {
           marka: form.marka,
           model: form.model,
           yil: Number(form.yil) || null,
@@ -162,22 +161,13 @@ export default function YeniAracEkle() {
           tramer: form.tramer,
           aciklama: form.aciklama,
           vitrin: form.vitrin,
-          resim: yuklenen[0],
           donanim: secilenDonanim,
-        })
-        .select()
-        .single();
+          resim: yuklenen[0],
+        },
+        yuklenen
+      );
 
-      if (carError) throw new Error(`Araç kaydetme hatası: ${carError.message}`);
-
-      const images = yuklenen.map((url, index) => ({
-        car_id: car.id,
-        image_url: url,
-        sort_order: index,
-      }));
-
-      const { error: imageError } = await supabase.from("car_images").insert(images);
-      if (imageError) console.error("Galeri kaydetme uyarısı:", imageError.message);
+      if (!result.success) throw new Error(result.error);
 
       dismissToast(loadingId as string);
       toast("✅ Araç başarıyla eklendi!", "success");
