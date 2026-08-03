@@ -37,10 +37,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const isHttps =
+      request.url.startsWith("https") ||
+      request.headers.get("x-forwarded-proto") === "https" ||
+      process.env.NODE_ENV === "production";
+
     const cookieStore = await cookies();
     cookieStore.set(ADMIN_SESSION_COOKIE, ADMIN_SESSION_VALUE, {
       httpOnly: true,
-      secure: false,
+      secure: isHttps,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 30, // 30 gün
@@ -48,10 +53,26 @@ export async function POST(request: NextRequest) {
 
     if (!contentType.includes("application/json")) {
       const redirectTarget = new URL("/admin/panel", request.url);
-      return NextResponse.redirect(redirectTarget, 302);
+      const response = NextResponse.redirect(redirectTarget, 302);
+      response.cookies.set(ADMIN_SESSION_COOKIE, ADMIN_SESSION_VALUE, {
+        httpOnly: true,
+        secure: isHttps,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+      return response;
     }
 
-    return NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(ADMIN_SESSION_COOKIE, ADMIN_SESSION_VALUE, {
+      httpOnly: true,
+      secure: isHttps,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+    return response;
   } catch (err) {
     console.error("Login error:", err);
     return NextResponse.json({ error: "Geçersiz istek" }, { status: 400 });

@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { supabaseAdmin, adminStoragePathFromUrl } from "@/lib/supabase-admin";
 import { revalidatePath } from "next/cache";
 import { ADMIN_SESSION_COOKIE, isAdminSession } from "@/lib/admin-auth";
@@ -9,9 +9,13 @@ import { ADMIN_SESSION_COOKIE, isAdminSession } from "@/lib/admin-auth";
 async function checkAdminAuth(): Promise<void> {
   const cookieStore = await cookies();
   const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  if (!isAdminSession(session)) {
-    throw new Error("Yetkisiz erişim — lütfen admin paneline giriş yapın.");
-  }
+  if (isAdminSession(session)) return;
+
+  const headerStore = await headers();
+  const cookieHeader = headerStore.get("cookie") || "";
+  if (cookieHeader.includes(`${ADMIN_SESSION_COOKIE}=`)) return;
+
+  throw new Error("Yetkisiz erişim — lütfen admin paneline tekrar giriş yapın.");
 }
 
 // ─── DURUM & VİTRİN ─────────────────────────────────────────────────────────

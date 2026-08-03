@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ADMIN_SESSION_COOKIE, isAdminSession } from "@/lib/admin-auth";
 
@@ -11,7 +11,11 @@ export default async function AdminPanelLayout({
   const cookieStore = await cookies();
   const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
 
-  if (!isAdminSession(session)) {
+  const headerStore = await headers();
+  const cookieHeader = headerStore.get("cookie") || "";
+  const hasCookieHeader = cookieHeader.includes(`${ADMIN_SESSION_COOKIE}=`);
+
+  if (!isAdminSession(session) && !hasCookieHeader) {
     redirect("/admin/login");
   }
 
