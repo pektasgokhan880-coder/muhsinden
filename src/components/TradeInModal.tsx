@@ -49,8 +49,8 @@ export default function TradeInModal({ targetCarTitle }: TradeInModalProps) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex items-center justify-center min-h-full my-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto my-auto">
             <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
               <h3 className="text-xl font-black text-yellow-500 flex items-center gap-2">
                 <span>🔄</span> Araç Takas Formu

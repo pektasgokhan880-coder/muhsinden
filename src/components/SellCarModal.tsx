@@ -43,27 +43,27 @@ export default function SellCarModal() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn text-left">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5 text-white">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+        <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex items-center justify-center min-h-full my-auto">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-4 text-white relative max-h-[90vh] overflow-y-auto my-auto">
+            <div className="flex justify-between items-start border-b border-zinc-800 pb-3 sticky top-0 bg-zinc-900 z-10">
               <div>
                 <h3 className="text-xl font-black text-yellow-500 flex items-center gap-2">
                   <span>💵</span> Bize Araç Sat — Anında Nakit Alım
                 </h3>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Aracınızın bilgilerini girin, 15 dakika içinde nakit alım teklifimizi iletelim.
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Aracınızın bilgilerini girin, 15 dakika içinde teklifimizi iletelim.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-zinc-400 hover:text-white font-bold text-xl cursor-pointer"
+                className="text-zinc-400 hover:text-white font-bold text-xl cursor-pointer p-1"
               >
                 ✕
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 pt-2">
               <div>
                 <label className="text-[11px] font-bold text-zinc-400 block mb-1 uppercase">
                   Aracınızın Marka ve Modeli *
@@ -151,7 +151,7 @@ export default function SellCarModal() {
               type="button"
               onClick={sendSellOffer}
               disabled={!carData.markaModel.trim()}
-              className="w-full bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition disabled:opacity-50 cursor-pointer shadow-lg shadow-yellow-500/20 text-sm mt-2"
+              className="w-full bg-yellow-500 text-black font-black py-3.5 rounded-xl hover:bg-yellow-400 transition disabled:opacity-50 cursor-pointer shadow-lg shadow-yellow-500/20 text-sm mt-2"
             >
               💬 Nakit Satış Teklifini Gönder (WhatsApp)
             </button>
