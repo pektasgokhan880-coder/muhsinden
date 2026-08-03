@@ -88,7 +88,7 @@ export default async function AdminPanel() {
             </Link>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-7">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {carList.map((car: Car) => (
               <div
                 key={car.id}

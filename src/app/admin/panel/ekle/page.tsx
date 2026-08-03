@@ -22,7 +22,7 @@ export default function YeniAracEkle() {
     vites: "Otomatik",
     fiyat: "",
     durum: "Aktif",
-    tramer: "Hasar kaydı yoktur / Boyasız",
+    tramer: "",
     aciklama: "",
   });
 

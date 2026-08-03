@@ -83,7 +83,7 @@ export default function Duzenle() {
         fiyat: String(data.fiyat ?? ""),
         resim: data.resim || "",
         durum: data.durum || "Aktif",
-        tramer: data.tramer || "Hasar kaydı yoktur",
+        tramer: data.tramer || "",
         aciklama: data.aciklama || "",
       });
       setKapakUrl(data.resim || "");

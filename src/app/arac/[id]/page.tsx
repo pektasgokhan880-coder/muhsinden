@@ -10,6 +10,8 @@ import PriceCard from "@/components/PriceCard";
 import SpecsGrid from "@/components/SpecsGrid";
 import CarFeatures from "@/components/CarFeatures";
 import Footer from "@/components/Footer";
+import LoanCalculator from "@/components/LoanCalculator";
+import TradeInModal from "@/components/TradeInModal";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -114,6 +116,9 @@ export default async function Page({ params }: Props) {
                 {car.aciklama || "Araç hakkında detaylı açıklama bulunmuyor."}
               </p>
             </div>
+
+            {/* Loan Calculator */}
+            <LoanCalculator carPrice={car.fiyat || 0} />
           </div>
 
           {/* Sticky Sidebar */}
@@ -129,6 +134,9 @@ export default async function Page({ params }: Props) {
               <span>💬</span>
               <span>WhatsApp&apos;tan Bilgi Al</span>
             </a>
+
+            {/* Trade In Button */}
+            <TradeInModal targetCarTitle={`${car.marka} ${car.model}`} />
 
             <a
               href={`tel:+${siteConfig.whatsapp}`}
