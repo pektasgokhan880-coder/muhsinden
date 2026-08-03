@@ -80,6 +80,12 @@ function formatTL(val: string | number): string {
   return new Intl.NumberFormat("tr-TR").format(num) + " TL";
 }
 
+function formatKmDisplay(val: string | number): string {
+  const num = Number(val);
+  if (isNaN(num) || num < 0) return "";
+  return new Intl.NumberFormat("tr-TR").format(num) + " KM";
+}
+
 export default function AracDuzenlePage() {
   const params = useParams();
   const router = useRouter();
@@ -408,6 +414,12 @@ export default function AracDuzenlePage() {
                   onChange={degistir}
                   className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
                 />
+                {/* Canlı KM Okuma Rozeti */}
+                {form.km !== "" && Number(form.km) >= 0 && (
+                  <span className="inline-block mt-1.5 text-xs font-black bg-zinc-800 border border-zinc-700 text-zinc-200 px-2.5 py-1 rounded-lg">
+                    🛣️ {formatKmDisplay(form.km)}
+                  </span>
+                )}
               </div>
 
               <div>
