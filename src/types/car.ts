@@ -15,7 +15,9 @@ export interface Car {
   aciklama?: string;
   resim?: string;
   tramer?: string;
-  donanim?: string[];
+  /** JSONB kolonundan gelen donanım listesi — güvenli erişim için dizi kontrolü yapın */
+  donanim?: string[] | unknown;
+  vitrin?: boolean;
   created_at?: string;
 }
 

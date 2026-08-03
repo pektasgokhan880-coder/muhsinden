@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { siteConfig, whatsappUrl } from "@/lib/site-config";
 import { useFavorites } from "@/context/FavoritesContext";
+import { SiteSettings } from "@/types/settings";
 
 interface CarCardProps {
   id: number;
@@ -151,7 +152,16 @@ export default function CarCard({
   );
 }
 
-export function ContactSection() {
+export function ContactSection({ settings }: { settings?: SiteSettings | null }) {
+  const addressLine1 = settings?.address_line1 || siteConfig.address.line1;
+  const addressLine2 = settings?.address_line2 || siteConfig.address.line2;
+  const addressCity = settings?.address_city || siteConfig.address.city;
+  const phoneDisplay = settings?.phone_display || siteConfig.phoneDisplay;
+  const whatsappNum = settings?.whatsapp || siteConfig.whatsapp;
+  const fb = settings?.social_facebook || siteConfig.social.facebook;
+  const ig = settings?.social_instagram || siteConfig.social.instagram;
+  const tt = settings?.social_tiktok || siteConfig.social.tiktok;
+
   return (
     <section className="max-w-7xl mx-auto px-5 md:px-6 grid md:grid-cols-3 gap-5 -mt-8">
       <div className="bg-zinc-900/80 p-6 rounded-3xl border border-zinc-800 hover:border-yellow-500/40 transition">
@@ -164,11 +174,11 @@ export function ContactSection() {
       <div className="bg-zinc-900/80 p-6 rounded-3xl border border-zinc-800 hover:border-yellow-500/40 transition">
         <h2 className="text-yellow-500 text-lg font-black">Galeri Adresimiz</h2>
         <p className="mt-2 text-zinc-400 leading-relaxed text-xs">
-          {siteConfig.address.line1}
+          {addressLine1}
           <br />
-          {siteConfig.address.line2}
+          {addressLine2}
           <br />
-          {siteConfig.address.city}
+          {addressCity}
         </p>
       </div>
 
@@ -178,13 +188,13 @@ export function ContactSection() {
       >
         <h2 className="text-yellow-500 text-lg font-black">İletişim & Konum</h2>
         <a
-          href={`tel:+${siteConfig.whatsapp}`}
+          href={`tel:+${whatsappNum}`}
           className="mt-2 block font-black text-lg text-white hover:text-yellow-500 transition"
         >
-          📞 {siteConfig.phoneDisplay}
+          📞 {phoneDisplay}
         </a>
         <a
-          href={whatsappUrl()}
+          href={whatsappUrl(whatsappNum)}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-3 block bg-green-500 text-black text-center font-black py-2.5 rounded-xl hover:bg-green-400 transition shadow-lg shadow-green-500/20 text-xs"
@@ -193,7 +203,7 @@ export function ContactSection() {
         </a>
         <div className="flex gap-2 mt-3 flex-wrap">
           <a
-            href={siteConfig.social.facebook}
+            href={fb}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-blue-600/90 hover:bg-blue-500 px-3 py-1 rounded-lg text-[11px] font-bold transition"
@@ -201,7 +211,7 @@ export function ContactSection() {
             Facebook
           </a>
           <a
-            href={siteConfig.social.instagram}
+            href={ig}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-pink-600/90 hover:bg-pink-500 px-3 py-1 rounded-lg text-[11px] font-bold transition"
@@ -209,7 +219,7 @@ export function ContactSection() {
             Instagram
           </a>
           <a
-            href={siteConfig.social.tiktok}
+            href={tt}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-white text-black px-3 py-1 rounded-lg text-[11px] font-bold hover:bg-zinc-200 transition"

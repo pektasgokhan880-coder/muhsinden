@@ -51,7 +51,13 @@ export default async function AdminPanel() {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
+            <Link
+              href="/admin/panel/ayarlar"
+              className="bg-zinc-800 text-zinc-200 border border-zinc-700 font-bold px-5 py-3 rounded-xl hover:bg-zinc-700 hover:text-white transition text-sm flex items-center gap-2"
+            >
+              <span>⚙️ Site Ayarları</span>
+            </Link>
             <Link
               href="/admin/logout"
               className="bg-zinc-800 text-zinc-300 border border-zinc-700 font-bold px-5 py-3 rounded-xl hover:bg-red-600 hover:text-white transition text-sm"
@@ -92,7 +98,11 @@ export default async function AdminPanel() {
             {carList.map((car: Car) => (
               <div
                 key={car.id}
-                className="bg-zinc-900/90 rounded-3xl overflow-hidden border border-zinc-800 flex flex-col justify-between hover:border-yellow-500/40 transition shadow-xl"
+                className={`bg-zinc-900/90 rounded-3xl overflow-hidden border flex flex-col justify-between transition shadow-xl ${
+                  car.vitrin
+                    ? "border-yellow-500/60 ring-1 ring-yellow-500/30"
+                    : "border-zinc-800 hover:border-yellow-500/40"
+                }`}
               >
                 <div>
                   <div className="w-full h-56 relative bg-zinc-950">
@@ -111,7 +121,7 @@ export default async function AdminPanel() {
                       </div>
                     )}
 
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
                       <span
                         className={`text-xs font-black px-3 py-1 rounded-full shadow ${
                           car.durum === "Satıldı"
@@ -123,6 +133,12 @@ export default async function AdminPanel() {
                       >
                         {car.durum || "Aktif"}
                       </span>
+
+                      {car.vitrin && (
+                        <span className="bg-yellow-500 text-black font-black px-2.5 py-0.5 rounded-full text-[10px] shadow-md flex items-center gap-1">
+                          <span>⭐</span> VITRIN
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -140,6 +156,7 @@ export default async function AdminPanel() {
                   <AdminCarCardControls
                     carId={car.id}
                     currentStatus={car.durum || "Aktif"}
+                    currentVitrin={Boolean(car.vitrin)}
                   />
                 </div>
               </div>

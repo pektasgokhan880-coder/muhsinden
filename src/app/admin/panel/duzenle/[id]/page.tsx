@@ -10,6 +10,42 @@ import { toast, dismissToast } from "@/components/Toast";
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MAX_IMAGES = 15;
 
+// Görselleri kalitesini bozmadan tarayıcıda WebP formatına sıkıştıran yardımcı fonksiyon
+const compressImage = (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1200;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("Fotoğraf dönüştürme hatası."));
+          },
+          "image/webp",
+          0.85
+        );
+      };
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+
 type CarForm = {
   marka: string;
   model: string;
@@ -22,6 +58,7 @@ type CarForm = {
   durum: string;
   tramer: string;
   aciklama: string;
+  vitrin: boolean;
 };
 
 type GalleryItem = {
@@ -55,6 +92,7 @@ export default function Duzenle() {
     durum: "Aktif",
     tramer: "",
     aciklama: "",
+    vitrin: false,
   });
 
   useEffect(() => {
@@ -85,6 +123,7 @@ export default function Duzenle() {
         durum: data.durum || "Aktif",
         tramer: data.tramer || "",
         aciklama: data.aciklama || "",
+        vitrin: Boolean(data.vitrin),
       });
       setKapakUrl(data.resim || "");
 
@@ -155,12 +194,13 @@ export default function Duzenle() {
   }
 
   async function uploadFile(file: File): Promise<string> {
+    const compressedBlob = await compressImage(file);
     const temizIsim = file.name.replace(/[^a-zA-Z0-9.]/g, "_").toLowerCase();
-    const isim = `${Date.now()}-${Math.floor(Math.random() * 1000)}-${temizIsim}`;
+    const isim = `${Date.now()}-${Math.floor(Math.random() * 1000)}-${temizIsim}.webp`;
 
     const { error: uploadError } = await supabase.storage
       .from("car-images")
-      .upload(isim, file);
+      .upload(isim, compressedBlob, { contentType: "image/webp" });
 
     if (uploadError) throw new Error("Resim yükleme hatası: " + uploadError.message);
 
@@ -225,6 +265,7 @@ export default function Duzenle() {
         durum: form.durum,
         tramer: form.tramer,
         aciklama: form.aciklama,
+        vitrin: form.vitrin,
       };
 
       const { error } = await supabase.from("cars").update(guncelVeri).eq("id", id);
@@ -331,6 +372,24 @@ export default function Duzenle() {
                 <option value="Pasif">Pasif</option>
               </select>
             </div>
+          </div>
+
+          {/* Vitrin Seçeneği */}
+          <div className="bg-amber-500/10 border border-amber-500/30 p-4.5 rounded-2xl flex items-center justify-between">
+            <div>
+              <span className="text-yellow-400 font-bold text-sm block">⭐ Ana Sayfa Vitrininde Göster (Öne Çıkan İlan)</span>
+              <p className="text-zinc-400 text-xs mt-0.5">
+                Bu aracı sitenin en üstündeki özel öne çıkanlar vitrininde sergiler.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.vitrin}
+                onChange={(e) => setForm({ ...form, vitrin: e.target.checked })}
+                className="w-5 h-5 accent-yellow-500 rounded cursor-pointer"
+              />
+            </label>
           </div>
 
           <div>

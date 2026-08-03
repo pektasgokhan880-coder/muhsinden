@@ -66,6 +66,7 @@ export default function YeniAracEkle() {
     durum: "Aktif",
     tramer: "",
     aciklama: "",
+    vitrin: false,
   });
 
   // Bellek sızıntılarını önlemek için blob URL temizliği
@@ -92,6 +93,8 @@ export default function YeniAracEkle() {
     }
 
     const yeniDosyalar = [...files, ...gecerli].slice(0, 15);
+    // Eski blob URL'leri temizle
+    blobUrls.forEach((u) => URL.revokeObjectURL(u));
     const yeniUrller = yeniDosyalar.map((f) => URL.createObjectURL(f));
     setFiles(yeniDosyalar);
     setBlobUrls(yeniUrller);
@@ -99,6 +102,8 @@ export default function YeniAracEkle() {
 
   function dosyaSil(index: number) {
     const yeniDosyalar = files.filter((_, i) => i !== index);
+    // Eski blob URL'leri temizle
+    blobUrls.forEach((u) => URL.revokeObjectURL(u));
     const yeniUrller = yeniDosyalar.map((f) => URL.createObjectURL(f));
     setFiles(yeniDosyalar);
     setBlobUrls(yeniUrller);
@@ -150,6 +155,7 @@ export default function YeniAracEkle() {
           durum: form.durum,
           tramer: form.tramer,
           aciklama: form.aciklama,
+          vitrin: form.vitrin,
           resim: yuklenen[0],
         })
         .select()
@@ -247,6 +253,24 @@ export default function YeniAracEkle() {
                 <option value="Pasif">Pasif (Gizli)</option>
               </select>
             </div>
+          </div>
+
+          {/* Vitrin Seçeneği */}
+          <div className="bg-amber-500/10 border border-amber-500/30 p-4.5 rounded-2xl flex items-center justify-between">
+            <div>
+              <span className="text-yellow-400 font-bold text-sm block">⭐ Ana Sayfa Vitrininde Göster (Öne Çıkan İlan)</span>
+              <p className="text-zinc-400 text-xs mt-0.5">
+                Bu aracı sitenin en üstündeki özel öne çıkanlar vitrininde büyük ve şık şekilde sergiler.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.vitrin}
+                onChange={(e) => setForm({ ...form, vitrin: e.target.checked })}
+                className="w-5 h-5 accent-yellow-500 rounded cursor-pointer"
+              />
+            </label>
           </div>
 
           <div>

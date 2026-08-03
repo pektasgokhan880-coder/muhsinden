@@ -1,13 +1,38 @@
+import Image from "next/image";
 import PremiumButton from "./PremiumButton";
 import { siteConfig, whatsappUrl } from "@/lib/site-config";
+import { SiteSettings } from "@/types/settings";
 
-export default function Hero() {
+interface HeroProps {
+  settings?: SiteSettings | null;
+}
+
+export default function Hero({ settings }: HeroProps) {
+  const siteName = settings?.name || siteConfig.name;
+  const whatsappNum = settings?.whatsapp || siteConfig.whatsapp;
+  const bannerUrl = settings?.banner_url;
+
   return (
     <section
       id="anasayfa"
-      className="min-h-[85vh] flex items-center justify-center px-5 md:px-6"
+      className="relative min-h-[85vh] flex items-center justify-center px-5 md:px-6 overflow-hidden"
     >
-      <div className="text-center max-w-5xl">
+      {/* Background Banner Image if uploaded */}
+      {bannerUrl && (
+        <div className="absolute inset-0 -z-10 opacity-20 pointer-events-none">
+          <Image
+            src={bannerUrl}
+            alt="Hero Banner"
+            fill
+            priority
+            className="object-cover filter blur-sm scale-105"
+            unoptimized
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/90 to-black" />
+        </div>
+      )}
+
+      <div className="text-center max-w-5xl relative z-10">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-yellow-500/30 bg-yellow-500/10 mb-6">
           <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
           <p className="text-yellow-500 font-bold text-xs md:text-sm tracking-[0.35em] uppercase">
@@ -16,7 +41,7 @@ export default function Hero() {
         </div>
 
         <h1 className="text-5xl sm:text-6xl md:text-8xl font-black tracking-tight leading-none">
-          {siteConfig.name.split(" ").map((part, i) =>
+          {siteName.split(" ").map((part, i) =>
             i === 1 ? (
               <span key={part} className="text-yellow-500">
                 {part}
@@ -37,7 +62,7 @@ export default function Hero() {
         <div className="mt-10 flex justify-center gap-4 flex-wrap">
           <PremiumButton href="#araclar">Araçları Gör</PremiumButton>
           <a
-            href={whatsappUrl()}
+            href={whatsappUrl(whatsappNum)}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-zinc-900 border border-zinc-700 text-white font-black px-8 py-4 rounded-2xl hover:border-green-500 hover:text-green-400 transition"

@@ -2,11 +2,15 @@
 
 interface CarFeaturesProps {
   tramer?: string;
-  donanim?: string[];
+  donanim?: string[] | unknown;
 }
 
 export default function CarFeatures({ tramer, donanim }: CarFeaturesProps) {
-  const hasDonanim = donanim && donanim.length > 0;
+  // JSONB'den gelen donanim string[] olduğunu güvenle doğrula
+  const donanimList: string[] = Array.isArray(donanim)
+    ? (donanim as unknown[]).filter((d): d is string => typeof d === "string")
+    : [];
+  const hasDonanim = donanimList.length > 0;
 
   return (
     <div className="space-y-8">
@@ -44,16 +48,16 @@ export default function CarFeatures({ tramer, donanim }: CarFeaturesProps) {
             </div>
             <div>
               <h3 className="text-xl md:text-2xl font-black text-yellow-500">
-                Donanım & Opsiyonlar
+                Donanım &amp; Opsiyonlar
               </h3>
               <p className="text-zinc-400 text-sm">
-                Araçta bulunan öne çıkan donanım özellikleri ({donanim.length} özellik)
+                Araçta bulunan öne çıkan donanım özellikleri ({donanimList.length} özellik)
               </p>
             </div>
           </div>
 
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {donanim.map((feature, idx) => (
+            {donanimList.map((feature, idx) => (
               <div
                 key={idx}
                 className="flex items-center gap-3 bg-black/50 border border-zinc-800 hover:border-yellow-500/30 px-4 py-3 rounded-2xl transition"

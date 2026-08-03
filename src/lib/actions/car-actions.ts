@@ -22,6 +22,25 @@ export async function toggleCarStatusAction(carId: number, nextStatus: string) {
   }
 }
 
+export async function toggleCarVitrinAction(carId: number, nextVitrin: boolean) {
+  try {
+    const { error } = await supabase
+      .from("cars")
+      .update({ vitrin: nextVitrin })
+      .eq("id", carId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath("/admin/panel");
+    revalidatePath("/");
+    revalidatePath(`/arac/${carId}`);
+    return { success: true };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Vitrin durumu değiştirilemedi";
+    return { success: false, error: message };
+  }
+}
+
 export async function deleteCarAction(carId: number) {
   try {
     const { data: gallery } = await supabase

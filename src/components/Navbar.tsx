@@ -5,11 +5,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { siteConfig, whatsappUrl } from "@/lib/site-config";
 import { useFavorites } from "@/context/FavoritesContext";
+import { SiteSettings } from "@/types/settings";
 import SellCarModal from "./SellCarModal";
 
-export default function Navbar() {
+interface NavbarProps {
+  settings?: SiteSettings | null;
+}
+
+export default function Navbar({ settings }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { favoritesCount } = useFavorites();
+
+  const logoSrc = settings?.logo_url || siteConfig.logoUrl;
+  const whatsappNum = settings?.whatsapp || siteConfig.whatsapp;
+  const siteName = settings?.name || siteConfig.name;
 
   const closeMenu = () => setIsOpen(false);
 
@@ -23,16 +32,17 @@ export default function Navbar() {
         >
           <div className="w-10 h-10 md:w-11 md:h-11 relative group-hover:scale-105 transition duration-300">
             <Image
-              src="/logo.svg"
-              alt={siteConfig.name}
+              src={logoSrc}
+              alt={siteName}
               fill
               className="object-contain"
               priority
+              unoptimized
             />
           </div>
           <div className="flex flex-col">
             <h2 className="text-xl md:text-2xl font-black text-yellow-500 tracking-wide leading-none">
-              {siteConfig.name}
+              {siteName}
             </h2>
             <span className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase mt-0.5">
               Premium Auto
@@ -44,6 +54,9 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-6 font-bold text-zinc-300 text-sm">
           <Link href="/#anasayfa" className="hover:text-yellow-500 transition">
             Ana Sayfa
+          </Link>
+          <Link href="/#vitrin" className="hover:text-yellow-500 transition flex items-center gap-1">
+            <span>⭐</span> Vitrin
           </Link>
           <Link href="/#araclar" className="hover:text-yellow-500 transition">
             Araçlar
@@ -64,7 +77,7 @@ export default function Navbar() {
           <SellCarModal />
 
           <a
-            href={whatsappUrl()}
+            href={whatsappUrl(whatsappNum)}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-green-500 hover:bg-green-400 text-black px-4 py-2 rounded-xl font-black transition shadow-lg shadow-green-500/20 active:scale-95 text-xs"
@@ -92,7 +105,7 @@ export default function Navbar() {
 
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="text-yellow-500 p-2 bg-zinc-900 border border-zinc-800 rounded-xl"
+            className="text-yellow-500 p-2 bg-zinc-900 border border-zinc-800 rounded-xl cursor-pointer"
             aria-label="Menü"
           >
             <svg
@@ -127,8 +140,11 @@ export default function Navbar() {
           <Link href="/#anasayfa" onClick={closeMenu} className="hover:text-yellow-500">
             Ana Sayfa
           </Link>
+          <Link href="/#vitrin" onClick={closeMenu} className="hover:text-yellow-500 flex items-center gap-1">
+            <span>⭐</span> Vitrin
+          </Link>
           <Link href="/#araclar" onClick={closeMenu} className="hover:text-yellow-500">
-            Araçlar
+            Tüm Araçlar
           </Link>
           <Link
             href="/favoriler"
@@ -146,7 +162,7 @@ export default function Navbar() {
             İletişim
           </Link>
           <a
-            href={whatsappUrl()}
+            href={whatsappUrl(whatsappNum)}
             target="_blank"
             rel="noopener noreferrer"
             className="bg-green-500 text-black text-center py-3.5 rounded-xl font-black shadow-lg shadow-green-500/20"

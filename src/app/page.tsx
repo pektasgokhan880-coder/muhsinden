@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { Car } from "@/types/car";
+import { SiteSettings } from "@/types/settings";
+import { siteConfig } from "@/lib/site-config";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
+import VitrinSection from "@/components/VitrinSection";
 import Footer from "@/components/Footer";
 import CarCard, { ContactSection } from "@/components/CarCard";
 
@@ -13,6 +16,7 @@ export default function Home() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
 
   // Advanced Filters
   const [search, setSearch] = useState("");
@@ -33,15 +37,26 @@ export default function Home() {
       try {
         const { data, error } = await supabase
           .from("cars")
-          .select("*")
+          .select("id, marka, model, yil, km, yakit, vites, fiyat, durum, resim, tramer, vitrin")
           .neq("durum", "Pasif")
           .order("id", { ascending: false });
 
         if (error) {
           setFetchError(error.message);
-          return;
+        } else if (data) {
+          setCars(data);
         }
-        if (data) setCars(data);
+
+        // Fetch Site Settings
+        const { data: setRes } = await supabase
+          .from("site_settings")
+          .select("*")
+          .eq("id", 1)
+          .single();
+
+        if (setRes) {
+          setSettings(setRes);
+        }
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
@@ -144,6 +159,8 @@ export default function Home() {
     setOnlyAvailable(false);
   };
 
+  const logoSrc = settings?.logo_url || siteConfig.logoUrl;
+
   return (
     <main className="min-h-screen bg-black text-white relative overflow-hidden">
       {/* Background glow graphics */}
@@ -154,18 +171,24 @@ export default function Home() {
 
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] opacity-[0.04] pointer-events-none z-0">
         <Image
-          src="/logo.svg"
+          src={logoSrc}
           alt=""
           fill
           priority
           className="object-contain"
           aria-hidden
+          unoptimized
         />
       </div>
 
       <div className="relative z-10">
-        <Navbar />
-        <Hero />
+        <Navbar settings={settings} />
+        <Hero settings={settings} />
+
+        {/* ÖNE ÇIKARILAN ARACLAR VİTRİN BÖLÜMÜ */}
+        {!loading && cars.length > 0 && (
+          <VitrinSection cars={cars} whatsappNum={settings?.whatsapp} />
+        )}
 
         {!isSupabaseConfigured() && (
           <div className="max-w-4xl mx-auto px-5 md:px-6 -mt-4 mb-8">
@@ -182,7 +205,7 @@ export default function Home() {
           </div>
         )}
 
-        <ContactSection />
+        <ContactSection settings={settings} />
 
         <section id="araclar" className="max-w-7xl mx-auto px-5 md:px-6 py-20">
           <div className="mb-10">
@@ -192,7 +215,7 @@ export default function Home() {
                   Galeri Stoğu
                 </span>
                 <h2 className="text-3xl md:text-5xl font-black text-white mt-1">
-                  Premium <span className="text-yellow-500">Araçlar</span>
+                  Tüm <span className="text-yellow-500">Araçlar</span>
                 </h2>
                 <p className="text-zinc-400 mt-2 font-medium text-sm">
                   {loading
@@ -387,7 +410,7 @@ export default function Home() {
           )}
         </section>
 
-        <Footer />
+        <Footer settings={settings} />
       </div>
     </main>
   );
