@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, ChangeEvent, useEffect } from "react";
+import { useState, ChangeEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { toast, dismissToast } from "@/components/Toast";
-import { DONANIM_LISTESI } from "@/types/car";
+import { ARAC_MARKALARI } from "@/types/car";
 import { createCarDatabaseAction } from "@/lib/actions/car-actions";
+
+// Yıl seçenekleri (2025'ten 1970'e kadar)
+const YIL_SECENEKLERI = Array.from({ length: 56 }, (_, i) => 2025 - i);
 
 // Görselleri kalitesini bozmadan tarayıcıda WebP formatına sıkıştıran yardımcı fonksiyon
 const compressImage = (file: File): Promise<Blob> => {
@@ -18,7 +22,7 @@ const compressImage = (file: File): Promise<Blob> => {
       img.src = event.target?.result as string;
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 1200; // Standart web genişliği çözünürlüğü
+        const MAX_WIDTH = 1200;
         let width = img.width;
         let height = img.height;
 
@@ -42,7 +46,7 @@ const compressImage = (file: File): Promise<Blob> => {
             }
           },
           "image/webp",
-          0.85 // Kalite oranı %85 (Görsel kayıp yaşatmayan en performanslı hafiflik oranı)
+          0.85
         );
       };
     };
@@ -50,18 +54,25 @@ const compressImage = (file: File): Promise<Blob> => {
   });
 };
 
+function formatTL(val: string | number): string {
+  const num = Number(val);
+  if (isNaN(num) || num <= 0) return "";
+  return new Intl.NumberFormat("tr-TR").format(num) + " TL";
+}
+
 export default function YeniAracEkle() {
   const router = useRouter();
 
   const [files, setFiles] = useState<File[]>([]);
   const [blobUrls, setBlobUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [secilenDonanim, setSecilenDonanim] = useState<string[]>([]);
+  const [isCustomMarka, setIsCustomMarka] = useState(false);
 
   const [form, setForm] = useState({
-    marka: "",
+    marka: "BMW",
+    customMarka: "",
     model: "",
-    yil: "",
+    yil: "2023",
     km: "",
     yakit: "Benzin",
     vites: "Otomatik",
@@ -72,48 +83,48 @@ export default function YeniAracEkle() {
     vitrin: false,
   });
 
-  // Bellek sızıntılarını önlemek için blob URL temizliği
-  useEffect(() => {
-    return () => {
-      blobUrls.forEach((u) => URL.revokeObjectURL(u));
-    };
-  }, [blobUrls]);
-
-  function degistir(
+  const degistir = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
-
-  function dosyaEkle(secilenler: File[]) {
-    const gecerli: File[] = [];
-    for (const f of secilenler) {
-      if (!f.type.startsWith("image/")) {
-        toast(f.name + ": Sadece resim yükleyin.", "error");
-        continue;
-      }
-      gecerli.push(f);
+  ) => {
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      const checked = (e.target as HTMLInputElement).checked;
+      setForm((prev) => ({ ...prev, [name]: checked }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
     }
+  };
 
-    const yeniDosyalar = [...files, ...gecerli].slice(0, 15);
-    // Eski blob URL'leri temizle
-    blobUrls.forEach((u) => URL.revokeObjectURL(u));
-    const yeniUrller = yeniDosyalar.map((f) => URL.createObjectURL(f));
-    setFiles(yeniDosyalar);
-    setBlobUrls(yeniUrller);
-  }
+  const handleMarkaSelect = (e: ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === "DIGER") {
+      setIsCustomMarka(true);
+      setForm((prev) => ({ ...prev, marka: "" }));
+    } else {
+      setIsCustomMarka(false);
+      setForm((prev) => ({ ...prev, marka: val }));
+    }
+  };
 
-  function dosyaSil(index: number) {
-    const yeniDosyalar = files.filter((_, i) => i !== index);
-    // Eski blob URL'leri temizle
-    blobUrls.forEach((u) => URL.revokeObjectURL(u));
-    const yeniUrller = yeniDosyalar.map((f) => URL.createObjectURL(f));
-    setFiles(yeniDosyalar);
-    setBlobUrls(yeniUrller);
-  }
+  const resimSecildi = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return;
+    const selectedFiles = Array.from(e.target.files);
+    setFiles((prev) => [...prev, ...selectedFiles]);
+
+    const newUrls = selectedFiles.map((file) => URL.createObjectURL(file));
+    setBlobUrls((prev) => [...prev, ...newUrls]);
+  };
+
+  const resimSil = (index: number) => {
+    URL.revokeObjectURL(blobUrls[index]);
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setBlobUrls((prev) => prev.filter((_, i) => i !== index));
+  };
 
   async function kaydet() {
-    if (!form.marka || !form.model) {
+    const sonMarka = isCustomMarka ? form.customMarka.trim() : form.marka.trim();
+
+    if (!sonMarka || !form.model.trim()) {
       toast("Lütfen Marka ve Model alanlarını doldurun.", "error");
       return;
     }
@@ -130,7 +141,6 @@ export default function YeniAracEkle() {
     const loadingId = toast("Fotoğraflar optimize ediliyor ve ilan yükleniyor...", "loading", 0);
 
     try {
-      // 1. Fotoğrafları Storage'a yükle (anon client ile - storage herkese açık)
       const yuklenen: string[] = [];
       for (const file of files) {
         const compressedBlob = await compressImage(file);
@@ -147,10 +157,9 @@ export default function YeniAracEkle() {
         yuklenen.push(data.publicUrl);
       }
 
-      // 2. Veritabanına kaydet (server action ile - service role key kullanır)
       const result = await createCarDatabaseAction(
         {
-          marka: form.marka,
+          marka: sonMarka,
           model: form.model,
           yil: Number(form.yil) || null,
           km: Number(form.km) || 0,
@@ -161,7 +170,7 @@ export default function YeniAracEkle() {
           tramer: form.tramer,
           aciklama: form.aciklama,
           vitrin: form.vitrin,
-          donanim: secilenDonanim,
+          donanim: [],
           resim: yuklenen[0],
         },
         yuklenen
@@ -171,7 +180,9 @@ export default function YeniAracEkle() {
 
       dismissToast(loadingId as string);
       toast("✅ Araç başarıyla eklendi!", "success");
-      setTimeout(() => { window.location.href = "/admin/panel"; }, 1000);
+      setTimeout(() => {
+        router.push("/admin/panel");
+      }, 800);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
       dismissToast(loadingId as string);
@@ -180,216 +191,322 @@ export default function YeniAracEkle() {
       setLoading(false);
     }
   }
+
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8">
-      <div className="max-w-3xl mx-auto bg-zinc-900 border border-yellow-500/20 rounded-3xl p-6 md:p-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-black text-yellow-500">
-            Yeni Araç Ekle
-          </h1>
-          <button
-            onClick={() => router.push("/admin/panel")}
-            className="text-xs bg-zinc-800 text-zinc-300 hover:text-white px-3.5 py-2 rounded-xl transition cursor-pointer"
-          >
-            ← İptal
-          </button>
-        </div>
-
-        <div className="grid gap-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Marka *</label>
-              <input name="marka" placeholder="Örn: BMW" onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Model *</label>
-              <input name="model" placeholder="Örn: M4 Competition" onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Yıl</label>
-              <input name="yil" type="number" placeholder="2023" onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Kilometre (KM)</label>
-              <input name="km" type="number" placeholder="45000" onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" />
-            </div>
-            <div className="col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Fiyat (TL) *</label>
-              <input name="fiyat" type="number" placeholder="2500000" className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" onChange={degistir} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Yakıt Tipi</label>
-              <select name="yakit" value={form.yakit} onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer">
-                <option value="Benzin">Benzin</option>
-                <option value="Dizel">Dizel</option>
-                <option value="Benzin / LPG">Benzin / LPG</option>
-                <option value="LPG">LPG</option>
-                <option value="Elektrik">Elektrik</option>
-                <option value="Hibrit">Hibrit</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Vites Tipi</label>
-              <select name="vites" value={form.vites} onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer">
-                <option value="Otomatik">Otomatik</option>
-                <option value="Manuel">Manuel</option>
-                <option value="Yarı Otomatik">Yarı Otomatik</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">İlan Durumu</label>
-              <select name="durum" value={form.durum} onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer">
-                <option value="Aktif">Aktif (Yayında)</option>
-                <option value="Satıldı">Satıldı</option>
-                <option value="Pasif">Pasif (Gizli)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Vitrin Seçeneği */}
-          <div className="bg-amber-500/10 border border-amber-500/30 p-4.5 rounded-2xl flex items-center justify-between">
-            <div>
-              <span className="text-yellow-400 font-bold text-sm block">⭐ Ana Sayfa Vitrininde Göster (Öne Çıkan İlan)</span>
-              <p className="text-zinc-400 text-xs mt-0.5">
-                Bu aracı sitenin en üstündeki özel öne çıkanlar vitrininde büyük ve şık şekilde sergiler.
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={form.vitrin}
-                onChange={(e) => setForm({ ...form, vitrin: e.target.checked })}
-                className="w-5 h-5 accent-yellow-500 rounded cursor-pointer"
-              />
-            </label>
-          </div>
-
+      <div className="max-w-6xl mx-auto bg-zinc-900 border border-yellow-500/20 rounded-3xl p-6 md:p-8 shadow-2xl space-y-6">
+        {/* Üst Başlık & İptal */}
+        <div className="flex justify-between items-center border-b border-zinc-800 pb-5">
           <div>
-            <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Tramer / Ekspertiz Bilgisi</label>
-            <input
-              name="tramer"
-              value={form.tramer}
-              placeholder="Örn: Değişensiz, boyasız. Tramer kaydı yoktur."
-              onChange={degistir}
-              className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Detaylı Araç Açıklaması</label>
-            <textarea
-              name="aciklama"
-              value={form.aciklama}
-              placeholder="Araç hakkında genel durum, bakım bilgileri, ekspertiz ve iletişim detayları..."
-              onChange={degistir}
-              className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 h-36 resize-none"
-            />
-          </div>
-
-          {/* Donanım / Özellikler */}
-          <div className="bg-black/40 p-5 rounded-2xl border border-zinc-800">
-            <label className="text-yellow-500 font-bold block mb-3 text-sm">🔧 Araç Donanımları & Özellikleri</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {DONANIM_LISTESI.map((item) => (
-                <label
-                  key={item}
-                  className={`flex items-center gap-2.5 cursor-pointer rounded-xl px-3.5 py-2.5 border transition text-sm ${
-                    secilenDonanim.includes(item)
-                      ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-300"
-                      : "bg-black/30 border-zinc-800 text-zinc-400 hover:border-zinc-600"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={secilenDonanim.includes(item)}
-                    onChange={() =>
-                      setSecilenDonanim((prev) =>
-                        prev.includes(item)
-                          ? prev.filter((d) => d !== item)
-                          : [...prev, item]
-                      )
-                    }
-                    className="accent-yellow-500 w-4 h-4 flex-shrink-0"
-                  />
-                  <span className="leading-tight">{item}</span>
-                </label>
-              ))}
-            </div>
-            {secilenDonanim.length > 0 && (
-              <p className="text-xs text-zinc-500 mt-3">{secilenDonanim.length} özellik seçildi</p>
-            )}
-          </div>
-
-          {/* Fotoğraflar Kutusu */}
-          <div className="bg-black/60 p-5 rounded-2xl border border-zinc-800">
-            <label className="text-yellow-500 font-bold block mb-3 text-sm">
-              📸 Araç Fotoğrafları (Maksimum 15 Adet)
-            </label>
-
-            <label className="block cursor-pointer bg-yellow-500 text-black font-black text-center py-4 rounded-xl hover:bg-yellow-400 transition shadow-lg shadow-yellow-500/10">
-              📸 FOTOĞRAF SEÇ
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  dosyaEkle(Array.from(e.target.files || []));
-                  e.target.value = "";
-                }}
-              />
-            </label>
-
-            {blobUrls.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-                {blobUrls.map((url, index) => (
-                  <div
-                    key={index}
-                    className="relative h-32 rounded-xl overflow-hidden border border-zinc-800 group bg-zinc-950"
-                  >
-                    <Image
-                      src={url}
-                      alt="Önizleme"
-                      fill
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                      className="object-cover"
-                      unoptimized
-                    />
-                    {index === 0 && (
-                      <span className="absolute bottom-2 left-2 bg-yellow-500 text-black font-black text-[10px] px-2 py-0.5 rounded z-10">
-                        KAPAK RESMİ
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => dosyaSil(index)}
-                      className="absolute top-2 right-2 bg-red-600/80 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center font-bold text-xs transition cursor-pointer z-10"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <p className="text-zinc-500 text-xs mt-3">
-              {files.length}/15 fotoğraf seçildi (Görseller yüklenirken otomatik optimize edilecektir)
+            <h1 className="text-3xl md:text-4xl font-black text-yellow-500">
+              ➕ Yeni Araç İlanı Ekle
+            </h1>
+            <p className="text-zinc-400 text-xs mt-1">
+              Araç bilgilerini ve fotoğraflarını girerek galeriye ilan ekleyin.
             </p>
           </div>
-
-          <button
-            onClick={kaydet}
-            disabled={loading}
-            className="bg-yellow-500 text-black font-black p-4.5 rounded-xl hover:bg-yellow-400 transition disabled:opacity-50 mt-2 cursor-pointer shadow-lg shadow-yellow-500/10 text-base w-full"
+          <Link
+            href="/admin/panel"
+            className="text-xs bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2.5 rounded-xl transition font-bold"
           >
-            {loading ? "FOTOĞRAFLAR OPTİMİZE EDİLİYOR..." : "İLANINIZI KAYDET"}
-          </button>
+            ← İptal
+          </Link>
+        </div>
+
+        {/* 2 Kolonlu Ferah Form Düzeni */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* SOL KOLON: Araç Detay ve Özellik Bilgileri */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Marka & Model */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                  Araç Markası *
+                </label>
+                {!isCustomMarka ? (
+                  <select
+                    name="marka"
+                    value={form.marka}
+                    onChange={handleMarkaSelect}
+                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer"
+                  >
+                    {ARAC_MARKALARI.map((m) => (
+                      <option key={m} value={m} className="bg-zinc-900 text-white">
+                        {m}
+                      </option>
+                    ))}
+                    <option value="DIGER" className="bg-zinc-900 text-yellow-400 font-bold">
+                      ➕ Diğer (Elle Yaz)
+                    </option>
+                  </select>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      name="customMarka"
+                      placeholder="Marka Adı Girin"
+                      value={form.customMarka}
+                      onChange={degistir}
+                      className="w-full bg-black/60 border border-yellow-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomMarka(false)}
+                      className="text-xs bg-zinc-800 text-zinc-300 hover:text-white px-3 rounded-xl"
+                    >
+                      Listeye Dön
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                  Araç Modeli *
+                </label>
+                <input
+                  type="text"
+                  name="model"
+                  placeholder="Örn: M4 Competition / C 200 AMG"
+                  value={form.model}
+                  onChange={degistir}
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                />
+              </div>
+            </div>
+
+            {/* Yıl, KM ve Fiyat */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                  Model Yılı
+                </label>
+                <select
+                  name="yil"
+                  value={form.yil}
+                  onChange={degistir}
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer"
+                >
+                  {YIL_SECENEKLERI.map((y) => (
+                    <option key={y} value={y} className="bg-zinc-900 text-white">
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                  Kilometre (KM)
+                </label>
+                <input
+                  type="number"
+                  name="km"
+                  placeholder="Örn: 45000"
+                  value={form.km}
+                  onChange={degistir}
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="text-xs font-bold text-zinc-400 uppercase">
+                    Satış Fiyatı (TL) *
+                  </label>
+                </div>
+                <input
+                  type="number"
+                  name="fiyat"
+                  placeholder="2500000"
+                  value={form.fiyat}
+                  onChange={degistir}
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                />
+                {/* Canlı Fiyat Okuma Rozeti */}
+                {form.fiyat && Number(form.fiyat) > 0 && (
+                  <span className="inline-block mt-1.5 text-xs font-black bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 px-2.5 py-1 rounded-lg">
+                    💰 {formatTL(form.fiyat)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Yakıt, Vites, Durum */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                  Yakıt Tipi
+                </label>
+                <select
+                  name="yakit"
+                  value={form.yakit}
+                  onChange={degistir}
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer"
+                >
+                  <option value="Benzin">Benzin</option>
+                  <option value="Dizel">Dizel</option>
+                  <option value="Benzin / LPG">Benzin / LPG</option>
+                  <option value="LPG">LPG</option>
+                  <option value="Elektrik">Elektrik</option>
+                  <option value="Hibrit">Hibrit</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                  Vites Tipi
+                </label>
+                <select
+                  name="vites"
+                  value={form.vites}
+                  onChange={degistir}
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer"
+                >
+                  <option value="Otomatik">Otomatik</option>
+                  <option value="Manuel">Manuel</option>
+                  <option value="Yarı Otomatik">Yarı Otomatik</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                  İlan Durumu
+                </label>
+                <select
+                  name="durum"
+                  value={form.durum}
+                  onChange={degistir}
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer"
+                >
+                  <option value="Aktif">Aktif (Yayında)</option>
+                  <option value="Satıldı">Satıldı</option>
+                  <option value="Pasif">Pasif (Gizli)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Vitrin Kutusu */}
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 flex items-center justify-between">
+              <div>
+                <span className="text-yellow-400 font-black text-sm block">
+                  ⭐ Ana Sayfa Vitrininde Göster (Öne Çıkan İlan)
+                </span>
+                <span className="text-zinc-400 text-xs">
+                  Bu aracı sitemizin en üstündeki özel koleksiyon vitrininde sergiler.
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                name="vitrin"
+                checked={form.vitrin}
+                onChange={degistir}
+                className="w-6 h-6 accent-yellow-500 cursor-pointer"
+              />
+            </div>
+
+            {/* Tramer / Ekspertiz */}
+            <div>
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                Tramer / Ekspertiz Bilgisi
+              </label>
+              <input
+                type="text"
+                name="tramer"
+                value={form.tramer}
+                placeholder="Örn: Değişensiz, boyasız. Tramer kaydı yoktur."
+                onChange={degistir}
+                className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+              />
+            </div>
+
+            {/* Açıklama */}
+            <div>
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
+                Detaylı Araç Açıklaması
+              </label>
+              <textarea
+                name="aciklama"
+                value={form.aciklama}
+                placeholder="Araç hakkında genel durum, bakım bilgileri, ekspertiz detayları..."
+                onChange={degistir}
+                className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500 h-32 resize-none"
+              />
+            </div>
+          </div>
+
+          {/* SAĞ KOLON: Fotoğraflar Yükleme ve Önizleme */}
+          <div className="lg:col-span-5 space-y-5">
+            <div className="bg-black/40 p-5 rounded-2xl border border-zinc-800 space-y-4">
+              <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
+                <label className="text-yellow-500 font-bold text-sm">
+                  📸 Araç Fotoğrafları ({files.length})
+                </label>
+                <span className="text-[11px] text-zinc-400">İlk fotoğraf kapak olur</span>
+              </div>
+
+              {/* Sürükle Bırak / Foto Yükleme Alanı */}
+              <label className="border-2 border-dashed border-zinc-700 hover:border-yellow-500 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer transition bg-black/30 group">
+                <span className="text-3xl mb-2 group-hover:scale-110 transition">📷</span>
+                <span className="text-sm font-bold text-zinc-300">
+                  Fotoğrafları Seçin veya Buraya Sürükleyin
+                </span>
+                <span className="text-xs text-zinc-500 mt-1">
+                  Birden fazla yüksek kaliteli fotoğraf seçebilirsiniz
+                </span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={resimSecildi}
+                  className="hidden"
+                />
+              </label>
+
+              {/* Seçilen Fotoğrafların Grid Gösterimi */}
+              {blobUrls.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 max-h-[380px] overflow-y-auto pr-1">
+                  {blobUrls.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className="relative aspect-square rounded-xl overflow-hidden border border-zinc-700 group"
+                    >
+                      <Image
+                        src={url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                      {idx === 0 && (
+                        <span className="absolute top-1 left-1 bg-yellow-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow">
+                          KAPAK
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => resimSil(idx)}
+                        className="absolute top-1 right-1 bg-red-600/90 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                        title="Sil"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Kaydet Butonu */}
+            <button
+              type="button"
+              onClick={kaydet}
+              disabled={loading}
+              className="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl hover:bg-yellow-400 transition disabled:opacity-50 cursor-pointer text-base shadow-xl shadow-yellow-500/20"
+            >
+              {loading ? "İlan Yükleniyor..." : "🚀 İlanı Yayınla"}
+            </button>
+          </div>
         </div>
       </div>
     </main>
