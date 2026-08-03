@@ -1,22 +1,23 @@
 import Link from "next/link";
 import Image from "next/image";
-import { supabase, storagePathFromUrl } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ADMIN_SESSION_COOKIE, isAdminSession } from "@/lib/admin-auth";
 import AdminStatsCards from "@/components/AdminStatsCards";
 import AdminCarCardControls from "@/components/AdminCarCardControls";
 import { Car } from "@/types/car";
+import { cookies } from "next/headers";
+import { ADMIN_SESSION_COOKIE, isAdminSession } from "@/lib/admin-auth";
+import { storagePathFromUrl } from "@/lib/supabase";
 
 export const revalidate = 0;
 
 async function sil(formData: FormData) {
   "use server";
 
+  // Çift güvenlik — layout zaten kontrol ediyor, burada da doğrula
   const cookieStore = await cookies();
   const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-
   if (!isAdminSession(session)) {
     redirect("/admin/login");
   }
@@ -64,14 +65,15 @@ async function sil(formData: FormData) {
   if (silmeBasarili) {
     revalidatePath("/admin/panel");
     revalidatePath("/");
-    redirect("/admin/panel");
   }
+
+  redirect("/admin/panel");
 }
 
 export default async function AdminPanel() {
+  // Layout zaten kontrol ediyor ama burada da çift güvenlik
   const cookieStore = await cookies();
   const auth = cookieStore.get(ADMIN_SESSION_COOKIE);
-
   if (!isAdminSession(auth?.value)) {
     redirect("/admin/login");
   }
@@ -134,6 +136,12 @@ export default async function AdminPanel() {
             </Link>
           </div>
         </div>
+
+        {fetchErrorMessage && (
+          <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-red-400 text-sm font-medium">
+            ⚠️ Veri yüklenemedi: {fetchErrorMessage}
+          </div>
+        )}
 
         {/* Inventory Statistics */}
         <AdminStatsCards cars={carList} />
