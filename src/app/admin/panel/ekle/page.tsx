@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, ChangeEvent, useEffect } from "react";
+import { useState, ChangeEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { toast } from "@/components/Toast";
+import { toast, dismissToast } from "@/components/Toast";
 
 export default function YeniAracEkle() {
   const router = useRouter();
-  const [authChecked, setAuthChecked] = useState(false);
 
   const [files, setFiles] = useState<File[]>([]);
   const [blobUrls, setBlobUrls] = useState<string[]>([]);
@@ -27,23 +26,10 @@ export default function YeniAracEkle() {
     aciklama: "",
   });
 
-  // Oturum kontrolü — cookie API üzerinden
-  useEffect(() => {
-    fetch("/api/admin/check")
-      .then((r) => {
-        if (!r.ok) router.replace("/admin/login");
-        else setAuthChecked(true);
-      })
-      .catch(() => router.replace("/admin/login"));
-  }, [router]);
-
   function degistir(
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    setForm({ ...form, [e.target.name]: e.target.value });
   }
 
   function dosyaEkle(secilenler: File[]) {
@@ -63,10 +49,7 @@ export default function YeniAracEkle() {
 
     const yeniDosyalar = [...files, ...gecerli].slice(0, 15);
     const yeniUrller = yeniDosyalar.map((f) => URL.createObjectURL(f));
-
-    // Eski blob URL'leri temizle
     blobUrls.forEach((u) => URL.revokeObjectURL(u));
-
     setFiles(yeniDosyalar);
     setBlobUrls(yeniUrller);
   }
@@ -85,7 +68,6 @@ export default function YeniAracEkle() {
       toast("Lütfen Marka, Model ve Fiyat alanlarını doldurun.", "error");
       return;
     }
-
     if (files.length === 0) {
       toast("Lütfen en az 1 adet araç fotoğrafı seçin.", "error");
       return;
@@ -98,9 +80,7 @@ export default function YeniAracEkle() {
       const yuklenen: string[] = [];
 
       for (const file of files) {
-        const temizIsim = file.name
-          .replace(/[^a-zA-Z0-9.]/g, "_")
-          .toLowerCase();
+        const temizIsim = file.name.replace(/[^a-zA-Z0-9.]/g, "_").toLowerCase();
         const isim = `${Date.now()}-${Math.floor(Math.random() * 1000)}-${temizIsim}`;
 
         const { error: uploadError } = await supabase.storage
@@ -111,10 +91,7 @@ export default function YeniAracEkle() {
           throw new Error(`Resim yükleme hatası: ${uploadError.message}`);
         }
 
-        const { data } = supabase.storage
-          .from("car-images")
-          .getPublicUrl(isim);
-
+        const { data } = supabase.storage.from("car-images").getPublicUrl(isim);
         yuklenen.push(data.publicUrl);
       }
 
@@ -154,43 +131,18 @@ export default function YeniAracEkle() {
         console.error("Galeri kaydetme uyarısı:", imageError.message);
       }
 
-      // Blob URL'leri temizle
       blobUrls.forEach((u) => URL.revokeObjectURL(u));
 
-      // Loading toast'ı kapat, başarı bildirimi göster
-      if (loadingId) {
-        const { dismissToast } = await import("@/components/Toast");
-        dismissToast(loadingId);
-      }
+      dismissToast(loadingId as string);
       toast("✅ Araç başarıyla eklendi!", "success");
-
-      // Kısa bekleyip panele dön
       setTimeout(() => router.push("/admin/panel"), 1200);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
-      if (loadingId) {
-        const { dismissToast } = await import("@/components/Toast");
-        dismissToast(loadingId);
-      }
+      const message = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
+      dismissToast(loadingId as string);
       toast(message, "error");
     } finally {
       setLoading(false);
     }
-  }
-
-  // Auth kontrol edilmeden önce boş sayfa göster
-  if (!authChecked) {
-    return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <span className="w-8 h-8 rounded-full border-4 border-yellow-500/20 border-t-yellow-500 animate-spin" />
-          <p className="text-yellow-500 font-bold text-sm tracking-widest uppercase">
-            Yükleniyor...
-          </p>
-        </div>
-      </main>
-    );
   }
 
   return (
@@ -211,81 +163,34 @@ export default function YeniAracEkle() {
         <div className="grid gap-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-                Marka *
-              </label>
-              <input
-                name="marka"
-                placeholder="Örn: BMW"
-                onChange={degistir}
-                className="input"
-              />
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Marka *</label>
+              <input name="marka" placeholder="Örn: BMW" onChange={degistir} className="input" />
             </div>
             <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-                Model *
-              </label>
-              <input
-                name="model"
-                placeholder="Örn: M4 Competition"
-                onChange={degistir}
-                className="input"
-              />
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Model *</label>
+              <input name="model" placeholder="Örn: M4 Competition" onChange={degistir} className="input" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-                Yıl
-              </label>
-              <input
-                name="yil"
-                type="number"
-                placeholder="2023"
-                onChange={degistir}
-                className="input"
-              />
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Yıl</label>
+              <input name="yil" type="number" placeholder="2023" onChange={degistir} className="input" />
             </div>
-
             <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-                Kilometre (KM)
-              </label>
-              <input
-                name="km"
-                type="number"
-                placeholder="45000"
-                onChange={degistir}
-                className="input"
-              />
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Kilometre (KM)</label>
+              <input name="km" type="number" placeholder="45000" onChange={degistir} className="input" />
             </div>
-
             <div className="col-span-2 md:col-span-1">
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-                Fiyat (TL) *
-              </label>
-              <input
-                name="fiyat"
-                type="number"
-                placeholder="2500000"
-                onChange={degistir}
-                className="input"
-              />
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Fiyat (TL) *</label>
+              <input name="fiyat" type="number" placeholder="2500000" onChange={degistir} className="input" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-                Yakıt Tipi
-              </label>
-              <select
-                name="yakit"
-                value={form.yakit}
-                onChange={degistir}
-                className="input cursor-pointer"
-              >
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Yakıt Tipi</label>
+              <select name="yakit" value={form.yakit} onChange={degistir} className="input cursor-pointer">
                 <option value="Benzin">Benzin</option>
                 <option value="Dizel">Dizel</option>
                 <option value="Benzin / LPG">Benzin / LPG</option>
@@ -294,33 +199,17 @@ export default function YeniAracEkle() {
                 <option value="Hibrit">Hibrit</option>
               </select>
             </div>
-
             <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-                Vites Tipi
-              </label>
-              <select
-                name="vites"
-                value={form.vites}
-                onChange={degistir}
-                className="input cursor-pointer"
-              >
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Vites Tipi</label>
+              <select name="vites" value={form.vites} onChange={degistir} className="input cursor-pointer">
                 <option value="Otomatik">Otomatik</option>
                 <option value="Manuel">Manuel</option>
                 <option value="Yarı Otomatik">Yarı Otomatik</option>
               </select>
             </div>
-
             <div>
-              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-                İlan Durumu
-              </label>
-              <select
-                name="durum"
-                value={form.durum}
-                onChange={degistir}
-                className="input cursor-pointer"
-              >
+              <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">İlan Durumu</label>
+              <select name="durum" value={form.durum} onChange={degistir} className="input cursor-pointer">
                 <option value="Aktif">Aktif (Yayında)</option>
                 <option value="Satıldı">Satıldı</option>
                 <option value="Pasif">Pasif (Gizli)</option>
@@ -328,11 +217,8 @@ export default function YeniAracEkle() {
             </div>
           </div>
 
-          {/* Tramer / Ekspertiz Bilgisi */}
           <div>
-            <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-              Tramer / Ekspertiz Bilgisi
-            </label>
+            <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Tramer / Ekspertiz Bilgisi</label>
             <input
               name="tramer"
               value={form.tramer}
@@ -342,11 +228,8 @@ export default function YeniAracEkle() {
             />
           </div>
 
-          {/* Açıklama Metni */}
           <div>
-            <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">
-              Detaylı Araç Açıklaması
-            </label>
+            <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Detaylı Araç Açıklaması</label>
             <textarea
               name="aciklama"
               placeholder="Araç hakkında genel durum, bakım bilgileri, ekspertiz ve iletişim detayları..."
