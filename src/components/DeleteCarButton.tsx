@@ -51,8 +51,13 @@ export default function DeleteCarButton({ carId }: DeleteCarButtonProps) {
 
       {/* Modern Center Screen Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6 text-center transform transition-all scale-100">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+            onClick={() => setShowModal(false)}
+          />
+
+          <div className="relative z-10 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
             <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
               ⚠️
             </div>

@@ -49,16 +49,21 @@ export default function TradeInModal({ targetCarTitle }: TradeInModalProps) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex items-center justify-center min-h-full my-auto">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto my-auto">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+            onClick={() => setOpen(false)}
+          />
+
+          <div className="relative z-10 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-4 text-white max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
               <h3 className="text-xl font-black text-yellow-500 flex items-center gap-2">
                 <span>🔄</span> Araç Takas Formu
               </h3>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-zinc-400 hover:text-white font-bold text-lg cursor-pointer"
+                className="text-zinc-400 hover:text-white font-bold text-xl cursor-pointer p-1"
               >
                 ✕
               </button>
@@ -128,7 +133,7 @@ export default function TradeInModal({ targetCarTitle }: TradeInModalProps) {
               type="button"
               onClick={sendTradeIn}
               disabled={!myCar.markaModel.trim()}
-              className="w-full bg-green-500 text-black font-black py-4 rounded-xl hover:bg-green-400 transition disabled:opacity-50 cursor-pointer shadow-lg shadow-green-500/20 text-sm mt-2"
+              className="w-full bg-green-500 text-black font-black py-3.5 rounded-xl hover:bg-green-400 transition disabled:opacity-50 cursor-pointer shadow-lg shadow-green-500/20 text-sm mt-2"
             >
               💬 WhatsApp ile Takas Teklifini Gönder
             </button>

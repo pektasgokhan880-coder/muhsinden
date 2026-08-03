@@ -43,15 +43,22 @@ export default function SellCarModal() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[99999] overflow-y-auto bg-black/85 backdrop-blur-md p-4 flex items-center justify-center min-h-full my-auto">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-4 text-white relative max-h-[90vh] overflow-y-auto my-auto">
-            <div className="flex justify-between items-start border-b border-zinc-800 pb-3 sticky top-0 bg-zinc-900 z-10">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+          {/* Backdrop Overlay */}
+          <div
+            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+            onClick={() => setOpen(false)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative z-10 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-4 text-white max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start border-b border-zinc-800 pb-3">
               <div>
                 <h3 className="text-xl font-black text-yellow-500 flex items-center gap-2">
                   <span>💵</span> Bize Araç Sat — Anında Nakit Alım
                 </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Aracınızın bilgilerini girin, 15 dakika içinde teklifimizi iletelim.
+                  Aracınızın bilgilerini girin, teklifimizi anında iletelim.
                 </p>
               </div>
               <button
@@ -73,7 +80,7 @@ export default function SellCarModal() {
                   placeholder="Örn: 2020 BMW 320i First Edition"
                   value={carData.markaModel}
                   onChange={(e) => setCarData({ ...carData, markaModel: e.target.value })}
-                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500"
                 />
               </div>
 
@@ -87,7 +94,7 @@ export default function SellCarModal() {
                     placeholder="2020"
                     value={carData.yil}
                     onChange={(e) => setCarData({ ...carData, yil: e.target.value })}
-                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500"
                   />
                 </div>
 
@@ -100,7 +107,7 @@ export default function SellCarModal() {
                     placeholder="45000"
                     value={carData.km}
                     onChange={(e) => setCarData({ ...carData, km: e.target.value })}
-                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500"
                   />
                 </div>
               </div>
@@ -115,7 +122,7 @@ export default function SellCarModal() {
                     placeholder="1850000"
                     value={carData.fiyat}
                     onChange={(e) => setCarData({ ...carData, fiyat: e.target.value })}
-                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500"
                   />
                 </div>
 
@@ -128,7 +135,7 @@ export default function SellCarModal() {
                     placeholder="0532 000 00 00"
                     value={carData.telefon}
                     onChange={(e) => setCarData({ ...carData, telefon: e.target.value })}
-                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                    className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500"
                   />
                 </div>
               </div>
@@ -142,7 +149,7 @@ export default function SellCarModal() {
                   placeholder="Örn: Hatasız, boyasız veya sağ çamurluk lokal boyalı"
                   value={carData.tramer}
                   onChange={(e) => setCarData({ ...carData, tramer: e.target.value })}
-                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                  className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500"
                 />
               </div>
             </div>
