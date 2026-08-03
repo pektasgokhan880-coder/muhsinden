@@ -1,13 +1,39 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 
 function LoginForm() {
-  const searchParams = useSearchParams();
-  const hataParam = searchParams.get("error");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hata, setHata] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setHata("");
+
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.ok) {
+        window.location.href = "/admin/panel";
+      } else {
+        setHata(data.error || "Kullanıcı adı veya şifre yanlış");
+      }
+    } catch {
+      setHata("Giriş yapılırken bir hata oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center p-5 relative overflow-hidden">
@@ -32,12 +58,7 @@ function LoginForm() {
           <p className="text-zinc-500 text-sm mt-2">Yönetim paneline giriş</p>
         </div>
 
-        <form
-          method="POST"
-          action="/api/admin/login"
-          className="space-y-5"
-          onSubmit={() => setLoading(true)}
-        >
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-2 block">
               Kullanıcı Adı
@@ -45,7 +66,9 @@ function LoginForm() {
             <input
               type="text"
               name="username"
-              placeholder="admin"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="muhsin34 veya admin"
               autoComplete="username"
               required
               className="input w-full"
@@ -59,6 +82,8 @@ function LoginForm() {
             <input
               type="password"
               name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
               required
@@ -66,9 +91,9 @@ function LoginForm() {
             />
           </div>
 
-          {hataParam && (
+          {hata && (
             <p className="text-red-400 font-bold text-center text-sm bg-red-500/10 border border-red-500/30 rounded-xl py-3">
-              Kullanıcı adı veya şifre yanlış
+              {hata}
             </p>
           )}
 

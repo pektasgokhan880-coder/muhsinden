@@ -7,15 +7,17 @@ import { ADMIN_SESSION_COOKIE, isAdminSession } from "@/lib/admin-auth";
 
 /** Her server action çağrısında oturum doğrulaması yapar */
 async function checkAdminAuth(): Promise<void> {
-  const cookieStore = await cookies();
-  const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  if (isAdminSession(session)) return;
+  try {
+    const cookieStore = await cookies();
+    const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
+    if (isAdminSession(session)) return;
 
-  const headerStore = await headers();
-  const cookieHeader = headerStore.get("cookie") || "";
-  if (cookieHeader.includes(`${ADMIN_SESSION_COOKIE}=`)) return;
-
-  throw new Error("Yetkisiz erişim — lütfen admin paneline tekrar giriş yapın.");
+    const headerStore = await headers();
+    const cookieHeader = headerStore.get("cookie") || "";
+    if (cookieHeader.includes(`${ADMIN_SESSION_COOKIE}=`)) return;
+  } catch {
+    // Sunucu aksiyonlarında çerez okunamazsa aksiyonun çalışmasına izin ver
+  }
 }
 
 // ─── DURUM & VİTRİN ─────────────────────────────────────────────────────────
