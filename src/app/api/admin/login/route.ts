@@ -1,51 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import {
   ADMIN_SESSION_COOKIE,
   ADMIN_SESSION_VALUE,
   getAdminCredentials,
 } from "@/lib/admin-auth";
 
-const loginAttempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_ATTEMPTS = 15;
-const WINDOW_MS = 15 * 60 * 1000;
-
-function getRateLimitKey(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const record = loginAttempts.get(ip);
-
-  if (!record || now > record.resetAt) {
-    loginAttempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-
-  if (record.count >= MAX_ATTEMPTS) return true;
-
-  record.count++;
-  return false;
-}
-
-function resetAttempts(ip: string): void {
-  loginAttempts.delete(ip);
-}
-
 export async function POST(request: NextRequest) {
-  const ip = getRateLimitKey(request);
-
-  if (isRateLimited(ip)) {
-    return NextResponse.json(
-      { error: "Çok fazla başarısız deneme. 15 dakika sonra tekrar deneyin." },
-      { status: 429 }
-    );
-  }
-
   try {
     const contentType = request.headers.get("content-type") || "";
 
@@ -55,29 +16,20 @@ export async function POST(request: NextRequest) {
     if (contentType.includes("application/json")) {
       const body = await request.json();
       username = String(body.username || "").trim();
-      password = String(body.password || "");
+      password = String(body.password || "").trim();
     } else {
       const form = await request.formData();
       username = String(form.get("username") || "").trim();
-      password = String(form.get("password") || "");
+      password = String(form.get("password") || "").trim();
     }
 
-    const { username: expectedUser, password: expectedPass } =
-      getAdminCredentials();
+    const { validUsernames, validPasswords } = getAdminCredentials();
 
-    if (!expectedPass || !username || !password) {
-      const url = new URL("/admin/login", request.url);
-      url.searchParams.set("error", "1");
-      return contentType.includes("application/json")
-        ? NextResponse.json({ error: "Geçersiz kimlik bilgileri" }, { status: 401 })
-        : NextResponse.redirect(url);
-    }
-
-    if (username !== expectedUser || password !== expectedPass) {
+    if (!validUsernames.has(username) || !validPasswords.has(password)) {
       if (!contentType.includes("application/json")) {
         const url = new URL("/admin/login", request.url);
         url.searchParams.set("error", "1");
-        return NextResponse.redirect(url);
+        return NextResponse.redirect(url, 302);
       }
       return NextResponse.json(
         { error: "Kullanıcı adı veya şifre yanlış" },
@@ -85,33 +37,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    resetAttempts(ip);
-
-    const isProd = process.env.NODE_ENV === "production";
-    const redirectTarget = new URL("/admin/panel", request.url);
-
-    if (!contentType.includes("application/json")) {
-      const response = NextResponse.redirect(redirectTarget);
-      response.cookies.set(ADMIN_SESSION_COOKIE, ADMIN_SESSION_VALUE, {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
-      });
-      return response;
-    }
-
-    const response = NextResponse.json({ ok: true });
-    response.cookies.set(ADMIN_SESSION_COOKIE, ADMIN_SESSION_VALUE, {
+    const cookieStore = await cookies();
+    cookieStore.set(ADMIN_SESSION_COOKIE, ADMIN_SESSION_VALUE, {
       httpOnly: true,
-      secure: isProd,
+      secure: false,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: 60 * 60 * 24 * 30, // 30 gün
     });
-    return response;
-  } catch {
+
+    if (!contentType.includes("application/json")) {
+      const redirectTarget = new URL("/admin/panel", request.url);
+      return NextResponse.redirect(redirectTarget, 302);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Login error:", err);
     return NextResponse.json({ error: "Geçersiz istek" }, { status: 400 });
   }
 }

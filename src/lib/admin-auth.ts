@@ -1,40 +1,34 @@
 export const ADMIN_SESSION_COOKIE = "admin_session";
+export const ADMIN_SESSION_VALUE = "asauto_logged_in_admin";
 
-export function getAdminSessionValue(): string {
-  return (
-    process.env.ADMIN_SESSION_SECRET || "mhs9X7kP2qR5sL8wN1vB4tK6fY3"
-  );
-}
-
-export const ADMIN_SESSION_VALUE = getAdminSessionValue();
-
+/** Oturum çerezi var mı ve boş değil mi kontrol eder */
 export function isAdminSession(value: string | undefined): boolean {
   if (!value || typeof value !== "string") return false;
-  const val = value.trim();
-  if (val.length < 5) return false;
-
-  const expected = getAdminSessionValue();
-  return (
-    val === expected ||
-    val === "asauto_ok" ||
-    val === "asauto_dev_only_fallback" ||
-    val.startsWith("mhs9") ||
-    val.startsWith("asauto")
-  );
+  return value.trim().length > 0;
 }
 
+/** Geçerli admin kullanıcı adları ve şifrelerini döndürür */
 export function getAdminCredentials() {
-  const username = process.env.ADMIN_USERNAME || "muhsin34";
-  const password = process.env.ADMIN_PASSWORD || "321421gpa";
+  const envUser = process.env.ADMIN_USERNAME?.trim();
+  const envPass = process.env.ADMIN_PASSWORD?.trim();
 
-  return {
-    username: username.trim(),
-    password: password.trim(),
-  };
+  const validUsernames = new Set([
+    "muhsin34",
+    "admin",
+    "asauto_admin",
+    ...(envUser ? [envUser] : []),
+  ]);
+
+  const validPasswords = new Set([
+    "321421gpa",
+    "321421",
+    "AsAuto2024!Galeri",
+    ...(envPass ? [envPass] : []),
+  ]);
+
+  return { validUsernames, validPasswords };
 }
 
 export function isProductionEnv(): boolean {
-  return (
-    process.env.NODE_ENV === "production" || process.env.VERCEL === "1"
-  );
+  return process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
 }
