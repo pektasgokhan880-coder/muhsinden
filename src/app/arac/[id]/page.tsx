@@ -12,6 +12,7 @@ import SpecsGrid from "@/components/SpecsGrid";
 import CarFeatures from "@/components/CarFeatures";
 import Footer from "@/components/Footer";
 import TradeInModal from "@/components/TradeInModal";
+import ShareButton from "@/components/ShareButton";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -138,6 +139,9 @@ export default async function Page({ params }: Props) {
 
             {/* Trade In Button */}
             <TradeInModal targetCarTitle={`${car.marka} ${car.model}`} />
+
+            {/* Share Listing Button */}
+            <ShareButton title={`${car.marka} ${car.model}`} />
 
             <a
               href={`tel:+${whatsappNum}`}
