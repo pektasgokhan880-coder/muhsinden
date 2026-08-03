@@ -1,74 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import AdminStatsCards from "@/components/AdminStatsCards";
 import AdminCarCardControls from "@/components/AdminCarCardControls";
 import { Car } from "@/types/car";
-import { cookies } from "next/headers";
-import { ADMIN_SESSION_COOKIE, isAdminSession } from "@/lib/admin-auth";
-import { storagePathFromUrl } from "@/lib/supabase";
 
 export const revalidate = 0;
 
-async function sil(formData: FormData) {
-  "use server";
-
-  const cookieStore = await cookies();
-  const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  if (!isAdminSession(session)) {
-    redirect("/admin/login");
-  }
-
-  const rawId = formData.get("id");
-  if (!rawId) return;
-
-  const id = Number(rawId);
-
-  try {
-    const { data: gallery } = await supabase
-      .from("car_images")
-      .select("image_url")
-      .eq("car_id", id);
-
-    const { data: car } = await supabase
-      .from("cars")
-      .select("resim")
-      .eq("id", id)
-      .single();
-
-    const urls = new Set<string>();
-    if (car?.resim) urls.add(car.resim);
-    gallery?.forEach((g) => {
-      if (g.image_url) urls.add(g.image_url);
-    });
-
-    const paths = [...urls]
-      .map(storagePathFromUrl)
-      .filter((p): p is string => Boolean(p));
-
-    if (paths.length > 0) {
-      await supabase.storage.from("car-images").remove(paths);
-    }
-
-    await supabase.from("car_images").delete().eq("car_id", id);
-    await supabase.from("cars").delete().eq("id", id);
-
-    revalidatePath("/admin/panel");
-    revalidatePath("/");
-  } catch (err) {
-    console.error("Silme hatası:", err);
-  }
-}
-
 export default async function AdminPanel() {
-  const cookieStore = await cookies();
-  const auth = cookieStore.get(ADMIN_SESSION_COOKIE);
-  if (!isAdminSession(auth?.value)) {
-    redirect("/admin/login");
-  }
-
   let carList: Car[] = [];
   let fetchErrorMessage: string | null = null;
 
