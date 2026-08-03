@@ -1,10 +1,52 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast, dismissToast } from "@/components/Toast";
+
+// Görselleri kalitesini bozmadan tarayıcıda WebP formatına sıkıştıran yardımcı fonksiyon
+const compressImage = (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1200; // Standart web genişliği çözünürlüğü
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Fotoğraf dönüştürme hatası."));
+            }
+          },
+          "image/webp",
+          0.85 // Kalite oranı %85 (Görsel kayıp yaşatmayan en performanslı hafiflik oranı)
+        );
+      };
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
 
 export default function YeniAracEkle() {
   const router = useRouter();
@@ -26,6 +68,13 @@ export default function YeniAracEkle() {
     aciklama: "",
   });
 
+  // Bellek sızıntılarını önlemek için blob URL temizliği
+  useEffect(() => {
+    return () => {
+      blobUrls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [blobUrls]);
+
   function degistir(
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
@@ -33,15 +82,10 @@ export default function YeniAracEkle() {
   }
 
   function dosyaEkle(secilenler: File[]) {
-    const MAX = 5 * 1024 * 1024;
     const gecerli: File[] = [];
     for (const f of secilenler) {
       if (!f.type.startsWith("image/")) {
         toast(f.name + ": Sadece resim yükleyin.", "error");
-        continue;
-      }
-      if (f.size > MAX) {
-        toast(f.name + ": Maksimum 5 MB olabilir.", "error");
         continue;
       }
       gecerli.push(f);
@@ -49,16 +93,13 @@ export default function YeniAracEkle() {
 
     const yeniDosyalar = [...files, ...gecerli].slice(0, 15);
     const yeniUrller = yeniDosyalar.map((f) => URL.createObjectURL(f));
-    blobUrls.forEach((u) => URL.revokeObjectURL(u));
     setFiles(yeniDosyalar);
     setBlobUrls(yeniUrller);
   }
 
   function dosyaSil(index: number) {
-    URL.revokeObjectURL(blobUrls[index]);
     const yeniDosyalar = files.filter((_, i) => i !== index);
     const yeniUrller = yeniDosyalar.map((f) => URL.createObjectURL(f));
-    blobUrls.forEach((u) => URL.revokeObjectURL(u));
     setFiles(yeniDosyalar);
     setBlobUrls(yeniUrller);
   }
@@ -74,18 +115,19 @@ export default function YeniAracEkle() {
     }
 
     setLoading(true);
-    const loadingId = toast("Fotoğraflar ve ilan yükleniyor...", "loading", 0);
+    const loadingId = toast("Fotoğraflar optimize ediliyor ve ilan yükleniyor...", "loading", 0);
 
     try {
       const yuklenen: string[] = [];
 
       for (const file of files) {
-        const temizIsim = file.name.replace(/[^a-zA-Z0-9.]/g, "_").toLowerCase();
-        const isim = `${Date.now()}-${Math.floor(Math.random() * 1000)}-${temizIsim}`;
+        const compressedBlob = await compressImage(file);
+        const temizIsim = file.name.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+        const isim = `${Date.now()}-${Math.floor(Math.random() * 1000)}-${temizIsim}.webp`;
 
         const { error: uploadError } = await supabase.storage
           .from("car-images")
-          .upload(isim, file);
+          .upload(isim, compressedBlob, { contentType: "image/webp" });
 
         if (uploadError) {
           throw new Error(`Resim yükleme hatası: ${uploadError.message}`);
@@ -113,9 +155,7 @@ export default function YeniAracEkle() {
         .select()
         .single();
 
-      if (carError) {
-        throw new Error(`Araç kaydetme hatası: ${carError.message}`);
-      }
+      if (carError) throw new Error(`Araç kaydetme hatası: ${carError.message}`);
 
       const images = yuklenen.map((url, index) => ({
         car_id: car.id,
@@ -123,21 +163,12 @@ export default function YeniAracEkle() {
         sort_order: index,
       }));
 
-      const { error: imageError } = await supabase
-        .from("car_images")
-        .insert(images);
-
-      if (imageError) {
-        console.error("Galeri kaydetme uyarısı:", imageError.message);
-      }
-
-      blobUrls.forEach((u) => URL.revokeObjectURL(u));
+      const { error: imageError } = await supabase.from("car_images").insert(images);
+      if (imageError) console.error("Galeri kaydetme uyarısı:", imageError.message);
 
       dismissToast(loadingId as string);
       toast("✅ Araç başarıyla eklendi!", "success");
-      setTimeout(() => {
-        window.location.href = "/admin/panel";
-      }, 1000);
+      setTimeout(() => { window.location.href = "/admin/panel"; }, 1000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
       dismissToast(loadingId as string);
@@ -146,7 +177,6 @@ export default function YeniAracEkle() {
       setLoading(false);
     }
   }
-
   return (
     <main className="min-h-screen bg-black text-white p-4 md:p-8">
       <div className="max-w-3xl mx-auto bg-zinc-900 border border-yellow-500/20 rounded-3xl p-6 md:p-8">
@@ -166,33 +196,33 @@ export default function YeniAracEkle() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Marka *</label>
-              <input name="marka" placeholder="Örn: BMW" onChange={degistir} className="input" />
+              <input name="marka" placeholder="Örn: BMW" onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" />
             </div>
             <div>
               <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Model *</label>
-              <input name="model" placeholder="Örn: M4 Competition" onChange={degistir} className="input" />
+              <input name="model" placeholder="Örn: M4 Competition" onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Yıl</label>
-              <input name="yil" type="number" placeholder="2023" onChange={degistir} className="input" />
+              <input name="yil" type="number" placeholder="2023" onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" />
             </div>
             <div>
               <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Kilometre (KM)</label>
-              <input name="km" type="number" placeholder="45000" onChange={degistir} className="input" />
+              <input name="km" type="number" placeholder="45000" onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" />
             </div>
             <div className="col-span-2 md:col-span-1">
               <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Fiyat (TL) *</label>
-              <input name="fiyat" type="number" placeholder="2500000" onChange={degistir} className="input" />
+              <input name="fiyat" type="number" placeholder="2500000" className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500" onChange={degistir} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Yakıt Tipi</label>
-              <select name="yakit" value={form.yakit} onChange={degistir} className="input cursor-pointer">
+              <select name="yakit" value={form.yakit} onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer">
                 <option value="Benzin">Benzin</option>
                 <option value="Dizel">Dizel</option>
                 <option value="Benzin / LPG">Benzin / LPG</option>
@@ -203,7 +233,7 @@ export default function YeniAracEkle() {
             </div>
             <div>
               <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Vites Tipi</label>
-              <select name="vites" value={form.vites} onChange={degistir} className="input cursor-pointer">
+              <select name="vites" value={form.vites} onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer">
                 <option value="Otomatik">Otomatik</option>
                 <option value="Manuel">Manuel</option>
                 <option value="Yarı Otomatik">Yarı Otomatik</option>
@@ -211,7 +241,7 @@ export default function YeniAracEkle() {
             </div>
             <div>
               <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">İlan Durumu</label>
-              <select name="durum" value={form.durum} onChange={degistir} className="input cursor-pointer">
+              <select name="durum" value={form.durum} onChange={degistir} className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 cursor-pointer">
                 <option value="Aktif">Aktif (Yayında)</option>
                 <option value="Satıldı">Satıldı</option>
                 <option value="Pasif">Pasif (Gizli)</option>
@@ -226,7 +256,7 @@ export default function YeniAracEkle() {
               value={form.tramer}
               placeholder="Örn: Değişensiz, boyasız. Tramer kaydı yoktur."
               onChange={degistir}
-              className="input"
+              className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500"
             />
           </div>
 
@@ -234,13 +264,14 @@ export default function YeniAracEkle() {
             <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Detaylı Araç Açıklaması</label>
             <textarea
               name="aciklama"
+              value={form.aciklama}
               placeholder="Araç hakkında genel durum, bakım bilgileri, ekspertiz ve iletişim detayları..."
               onChange={degistir}
-              className="input h-36 resize-none"
+              className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 h-36 resize-none"
             />
           </div>
 
-          {/* Fotoğraflar */}
+          {/* Fotoğraflar Kutusu */}
           <div className="bg-black/60 p-5 rounded-2xl border border-zinc-800">
             <label className="text-yellow-500 font-bold block mb-3 text-sm">
               📸 Araç Fotoğrafları (Maksimum 15 Adet)
@@ -293,16 +324,16 @@ export default function YeniAracEkle() {
             )}
 
             <p className="text-zinc-500 text-xs mt-3">
-              {files.length}/15 fotoğraf seçildi (İlk seçilen fotoğraf vitrin kapak resmi olur)
+              {files.length}/15 fotoğraf seçildi (Görseller yüklenirken otomatik optimize edilecektir)
             </p>
           </div>
 
           <button
             onClick={kaydet}
             disabled={loading}
-            className="bg-yellow-500 text-black font-black p-4.5 rounded-xl hover:bg-yellow-400 transition disabled:opacity-50 mt-2 cursor-pointer shadow-lg shadow-yellow-500/10 text-base"
+            className="bg-yellow-500 text-black font-black p-4.5 rounded-xl hover:bg-yellow-400 transition disabled:opacity-50 mt-2 cursor-pointer shadow-lg shadow-yellow-500/10 text-base w-full"
           >
-            {loading ? "FOTOĞRAFLAR VE İLAN YÜKLENİYOR..." : "İLANINIZI KAYDET"}
+            {loading ? "FOTOĞRAFLAR OPTİMİZE EDİLİYOR..." : "İLANINIZI KAYDET"}
           </button>
         </div>
       </div>
