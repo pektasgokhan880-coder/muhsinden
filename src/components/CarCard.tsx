@@ -109,8 +109,8 @@ export default function CarCard({
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
           <Link href={`/arac/${id}`}>
-            <h3 className="text-lg font-black text-yellow-500 uppercase leading-tight hover:text-yellow-400 transition truncate">
-              {marka} <span className="text-white">{model}</span>
+            <h3 className="text-sm font-black text-yellow-500 uppercase leading-snug hover:text-yellow-400 transition line-clamp-2 min-h-[2.5rem]">
+              {marka} <span className="text-white font-extrabold">{model}</span>
             </h3>
           </Link>
 
