@@ -1,4 +1,4 @@
--- AS AUTO — Supabase Güvenlik Güncellemesi
+-- AS AUTO — Supabase Schema & Eksik Sütun Düzeltmeleri
 -- Supabase SQL Editor'da çalıştırın
 
 -- 1. Araçlar Tablosu
@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS cars (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Var olan veritabanları için güvenli sütun eklemeleri
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS tramer TEXT DEFAULT 'Hasar kaydı yoktur';
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS donanim JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS vitrin BOOLEAN DEFAULT false;
@@ -34,7 +33,7 @@ CREATE TABLE IF NOT EXISTS car_images (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Site Genel Ayarları Tablosu (Tek Satır Konfigürasyon)
+-- 3. Site Genel Ayarları Tablosu
 CREATE TABLE IF NOT EXISTS site_settings (
   id INTEGER PRIMARY KEY DEFAULT 1,
   name TEXT DEFAULT 'AS AUTO',
@@ -56,24 +55,38 @@ CREATE TABLE IF NOT EXISTS site_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Varsayılan site ayarlarını doldur (Eğer yoksa)
+-- Eksik kalmış olabilecek tüm site_settings sütunlarını güvenle ekle
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS name TEXT DEFAULT 'AS AUTO';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS tagline TEXT DEFAULT 'Premium Otomobil Galerisi';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS description TEXT DEFAULT 'AS AUTO güvencesiyle ikinci el premium araç alım ve satım hizmetleri.';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '05461772537';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS phone_display TEXT DEFAULT '0546 177 25 37';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS whatsapp TEXT DEFAULT '905461772537';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS address_line1 TEXT DEFAULT 'Ferhatpaşa Mah.';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS address_line2 TEXT DEFAULT 'Yeditepe Cad. No:30';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS address_city TEXT DEFAULT 'Ataşehir / İstanbul';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS social_facebook TEXT DEFAULT 'https://www.facebook.com';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS social_instagram TEXT DEFAULT 'https://www.instagram.com';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS social_tiktok TEXT DEFAULT 'https://www.tiktok.com';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS working_hours_weekday TEXT DEFAULT '09:00 - 19:00';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS working_hours_weekend TEXT DEFAULT '10:00 - 18:00';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS logo_url TEXT DEFAULT '/logo.svg';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS banner_url TEXT DEFAULT '';
+ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
 INSERT INTO site_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
--- 4. Performans ve Hız İndeksleri
+-- 4. Performans İndeksleri
 CREATE INDEX IF NOT EXISTS idx_car_images_car_id ON car_images(car_id);
 CREATE INDEX IF NOT EXISTS idx_cars_durum ON cars(durum);
 CREATE INDEX IF NOT EXISTS idx_cars_durum_id ON cars(durum, id DESC);
 CREATE INDEX IF NOT EXISTS idx_cars_vitrin ON cars(vitrin);
-CREATE INDEX IF NOT EXISTS idx_cars_marka ON cars(marka);
-CREATE INDEX IF NOT EXISTS idx_cars_fiyat ON cars(fiyat);
-CREATE INDEX IF NOT EXISTS idx_cars_yil ON cars(yil);
 
 -- 5. Row Level Security (RLS)
 ALTER TABLE cars ENABLE ROW LEVEL SECURITY;
 ALTER TABLE car_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
 
--- ✅ Herkes okuyabilir (Public site için açık)
 DROP POLICY IF EXISTS "cars_public_read" ON cars;
 CREATE POLICY "cars_public_read" ON cars FOR SELECT USING (true);
 
@@ -83,11 +96,5 @@ CREATE POLICY "car_images_public_read" ON car_images FOR SELECT USING (true);
 DROP POLICY IF EXISTS "site_settings_public_read" ON site_settings;
 CREATE POLICY "site_settings_public_read" ON site_settings FOR SELECT USING (true);
 
--- 🔒 Yazma izinleri KALDIRILDI — Artık sadece service_role key yazabilir (RLS bypass)
--- Aşağıdaki eski politikalar temizleniyor:
-DROP POLICY IF EXISTS "cars_anon_write" ON cars;
-DROP POLICY IF EXISTS "car_images_anon_write" ON car_images;
-DROP POLICY IF EXISTS "site_settings_anon_write" ON site_settings;
-
--- NOT: Service role key RLS'yi otomatik bypass ettiği için ayrı bir policy gerekmez.
--- Tüm yazma işlemleri artık sunucu tarafında SUPABASE_SERVICE_ROLE_KEY ile yapılır.
+-- PostgREST API Şema önbelleğini yenile
+NOTIFY pgrst, 'reload schema';
