@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { toast, dismissToast } from "@/components/Toast";
+import { DONANIM_LISTESI } from "@/types/car";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MAX_IMAGES = 15;
@@ -79,6 +80,7 @@ export default function Duzenle() {
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [deletedImageIds, setDeletedImageIds] = useState<number[]>([]);
   const [kapakUrl, setKapakUrl] = useState("");
+  const [secilenDonanim, setSecilenDonanim] = useState<string[]>([]);
 
   const [form, setForm] = useState<CarForm>({
     marka: "",
@@ -126,6 +128,11 @@ export default function Duzenle() {
         vitrin: Boolean(data.vitrin),
       });
       setKapakUrl(data.resim || "");
+
+      // Mevcut donanımları yükle
+      if (Array.isArray(data.donanim)) {
+        setSecilenDonanim(data.donanim as string[]);
+      }
 
       const { data: images } = await supabase
         .from("car_images")
@@ -266,6 +273,7 @@ export default function Duzenle() {
         tramer: form.tramer,
         aciklama: form.aciklama,
         vitrin: form.vitrin,
+        donanim: secilenDonanim,
       };
 
       const { error } = await supabase.from("cars").update(guncelVeri).eq("id", id);
@@ -400,6 +408,40 @@ export default function Duzenle() {
           <div>
             <label className="text-xs font-bold text-zinc-400 block mb-1.5 uppercase">Açıklama</label>
             <textarea name="aciklama" value={form.aciklama} onChange={degistir} placeholder="Açıklama" className="input h-36 resize-none" />
+          </div>
+
+          {/* Donanım / Özellikler */}
+          <div className="bg-black/40 p-5 rounded-2xl border border-zinc-800">
+            <label className="text-yellow-500 font-bold block mb-3 text-sm">🔧 Araç Donanımları & Özellikleri</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {DONANIM_LISTESI.map((item) => (
+                <label
+                  key={item}
+                  className={`flex items-center gap-2.5 cursor-pointer rounded-xl px-3.5 py-2.5 border transition text-sm ${
+                    secilenDonanim.includes(item)
+                      ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-300"
+                      : "bg-black/30 border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={secilenDonanim.includes(item)}
+                    onChange={() =>
+                      setSecilenDonanim((prev) =>
+                        prev.includes(item)
+                          ? prev.filter((d) => d !== item)
+                          : [...prev, item]
+                      )
+                    }
+                    className="accent-yellow-500 w-4 h-4 flex-shrink-0"
+                  />
+                  <span className="leading-tight">{item}</span>
+                </label>
+              ))}
+            </div>
+            {secilenDonanim.length > 0 && (
+              <p className="text-xs text-zinc-500 mt-3">{secilenDonanim.length} özellik seçildi</p>
+            )}
           </div>
 
           {/* Fotoğraf Yönetimi */}

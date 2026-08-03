@@ -22,12 +22,14 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   keywords: [
     "AS AUTO",
+    "muhsinden",
     "ikinci el araç",
     "premium otomobil",
     "oto galeri",
     "İstanbul oto galeri",
     "Ataşehir oto galeri",
     "lüks araç alım satım",
+    "galeri araç ilanları",
   ],
   authors: [{ name: siteConfig.name, url: siteConfig.url }],
   creator: siteConfig.name,
@@ -50,7 +52,7 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     images: [
       {
-        url: "/logo.svg",
+        url: "/logo.png",
         width: 1200,
         height: 630,
         alt: `${siteConfig.name} Premium Otomobil Galerisi`,
@@ -63,12 +65,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `${siteConfig.name} | ${siteConfig.tagline}`,
     description: siteConfig.description,
-    images: ["/logo.svg"],
+    images: ["/logo.png"],
   },
   icons: {
     icon: "/logo.svg",
-    shortcut: "/logo.svg",
-    apple: "/logo.svg",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
   },
 };
 

@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast, dismissToast } from "@/components/Toast";
+import { DONANIM_LISTESI } from "@/types/car";
 
 // Görselleri kalitesini bozmadan tarayıcıda WebP formatına sıkıştıran yardımcı fonksiyon
 const compressImage = (file: File): Promise<Blob> => {
@@ -54,6 +55,7 @@ export default function YeniAracEkle() {
   const [files, setFiles] = useState<File[]>([]);
   const [blobUrls, setBlobUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [secilenDonanim, setSecilenDonanim] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     marka: "",
@@ -110,8 +112,12 @@ export default function YeniAracEkle() {
   }
 
   async function kaydet() {
-    if (!form.marka || !form.model || !form.fiyat) {
-      toast("Lütfen Marka, Model ve Fiyat alanlarını doldurun.", "error");
+    if (!form.marka || !form.model) {
+      toast("Lütfen Marka ve Model alanlarını doldurun.", "error");
+      return;
+    }
+    if (!form.fiyat || Number(form.fiyat) <= 0) {
+      toast("Lütfen geçerli bir fiyat girin.", "error");
       return;
     }
     if (files.length === 0) {
@@ -157,6 +163,7 @@ export default function YeniAracEkle() {
           aciklama: form.aciklama,
           vitrin: form.vitrin,
           resim: yuklenen[0],
+          donanim: secilenDonanim,
         })
         .select()
         .single();
@@ -293,6 +300,40 @@ export default function YeniAracEkle() {
               onChange={degistir}
               className="w-full bg-black/60 border border-zinc-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-yellow-500 h-36 resize-none"
             />
+          </div>
+
+          {/* Donanım / Özellikler */}
+          <div className="bg-black/40 p-5 rounded-2xl border border-zinc-800">
+            <label className="text-yellow-500 font-bold block mb-3 text-sm">🔧 Araç Donanımları & Özellikleri</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {DONANIM_LISTESI.map((item) => (
+                <label
+                  key={item}
+                  className={`flex items-center gap-2.5 cursor-pointer rounded-xl px-3.5 py-2.5 border transition text-sm ${
+                    secilenDonanim.includes(item)
+                      ? "bg-yellow-500/10 border-yellow-500/40 text-yellow-300"
+                      : "bg-black/30 border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={secilenDonanim.includes(item)}
+                    onChange={() =>
+                      setSecilenDonanim((prev) =>
+                        prev.includes(item)
+                          ? prev.filter((d) => d !== item)
+                          : [...prev, item]
+                      )
+                    }
+                    className="accent-yellow-500 w-4 h-4 flex-shrink-0"
+                  />
+                  <span className="leading-tight">{item}</span>
+                </label>
+              ))}
+            </div>
+            {secilenDonanim.length > 0 && (
+              <p className="text-xs text-zinc-500 mt-3">{secilenDonanim.length} özellik seçildi</p>
+            )}
           </div>
 
           {/* Fotoğraflar Kutusu */}

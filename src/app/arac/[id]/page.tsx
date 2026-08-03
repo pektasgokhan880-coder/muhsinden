@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getSiteSettings } from "@/lib/site-config";
 import { siteConfig } from "@/lib/site-config";
 import Navbar from "@/components/Navbar";
 import CarGallery from "@/components/CarGallery";
@@ -45,11 +46,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function Page({ params }: Props) {
   const { id } = await params;
 
-  const { data: car } = await supabase
-    .from("cars")
-    .select("*")
-    .eq("id", id)
-    .single();
+  // Araç ve site ayarlarını paralel çek
+  const [{ data: car }, settings] = await Promise.all([
+    supabase.from("cars").select("*").eq("id", id).single(),
+    getSiteSettings(),
+  ]);
 
   if (!car || car.durum === "Pasif") {
     notFound();
@@ -68,8 +69,12 @@ export default async function Page({ params }: Props) {
         ? [car.resim]
         : [];
 
+  // Dinamik iletişim bilgileri
+  const whatsappNum = settings.whatsapp || siteConfig.whatsapp;
+  const phoneDisplay = settings.phone_display || siteConfig.phoneDisplay;
+
   const whatsappMessage = encodeURIComponent(
-    `Merhaba ${siteConfig.name}, ${car.marka} ${car.model} (${car.yil || ""}) ilanı hakkında bilgi almak istiyorum.`
+    `Merhaba ${settings.name || siteConfig.name}, ${car.marka} ${car.model} (${car.yil || ""}) ilanı hakkında bilgi almak istiyorum.`
   );
 
   return (
@@ -120,9 +125,9 @@ export default async function Page({ params }: Props) {
           {/* Sticky Sidebar */}
           <div className="space-y-6 lg:sticky lg:top-24 self-start">
             <PriceCard fiyat={car.fiyat} durum={car.durum} />
-            
+
             <a
-              href={`https://wa.me/${siteConfig.whatsapp}?text=${whatsappMessage}`}
+              href={`https://wa.me/${whatsappNum}?text=${whatsappMessage}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-3 rounded-2xl bg-green-500 py-4 md:py-5 text-lg font-black text-black transition-all duration-300 hover:scale-[1.02] hover:bg-green-400 shadow-lg shadow-green-500/20"
@@ -135,11 +140,11 @@ export default async function Page({ params }: Props) {
             <TradeInModal targetCarTitle={`${car.marka} ${car.model}`} />
 
             <a
-              href={`tel:+${siteConfig.whatsapp}`}
+              href={`tel:+${whatsappNum}`}
               className="flex items-center justify-center gap-3 rounded-2xl bg-zinc-900 border border-zinc-700 py-4 font-bold text-white transition hover:border-yellow-500 hover:text-yellow-400"
             >
               <span>📞</span>
-              <span>Telefon Et: {siteConfig.phoneDisplay}</span>
+              <span>Telefon Et: {phoneDisplay}</span>
             </a>
 
             <Link
@@ -152,7 +157,7 @@ export default async function Page({ params }: Props) {
         </div>
       </div>
 
-      <Footer />
+      <Footer settings={settings} />
     </main>
   );
 }

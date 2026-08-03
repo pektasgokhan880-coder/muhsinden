@@ -1,5 +1,5 @@
--- AS AUTO — Supabase Şema & Performans İndeksleri
--- Supabase SQL Editor'da çalıştırabilirsiniz
+-- AS AUTO — Supabase Güvenlik Güncellemesi
+-- Supabase SQL Editor'da çalıştırın
 
 -- 1. Araçlar Tablosu
 CREATE TABLE IF NOT EXISTS cars (
@@ -59,19 +59,21 @@ CREATE TABLE IF NOT EXISTS site_settings (
 -- Varsayılan site ayarlarını doldur (Eğer yoksa)
 INSERT INTO site_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
--- 4. Performans ve Hız İndeksleri (Supabase Sorgu Hızlandırma)
+-- 4. Performans ve Hız İndeksleri
 CREATE INDEX IF NOT EXISTS idx_car_images_car_id ON car_images(car_id);
 CREATE INDEX IF NOT EXISTS idx_cars_durum ON cars(durum);
 CREATE INDEX IF NOT EXISTS idx_cars_durum_id ON cars(durum, id DESC);
 CREATE INDEX IF NOT EXISTS idx_cars_vitrin ON cars(vitrin);
 CREATE INDEX IF NOT EXISTS idx_cars_marka ON cars(marka);
+CREATE INDEX IF NOT EXISTS idx_cars_fiyat ON cars(fiyat);
+CREATE INDEX IF NOT EXISTS idx_cars_yil ON cars(yil);
 
 -- 5. Row Level Security (RLS)
 ALTER TABLE cars ENABLE ROW LEVEL SECURITY;
 ALTER TABLE car_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
 
--- Herkes okuyabilir (Public site)
+-- ✅ Herkes okuyabilir (Public site için açık)
 DROP POLICY IF EXISTS "cars_public_read" ON cars;
 CREATE POLICY "cars_public_read" ON cars FOR SELECT USING (true);
 
@@ -81,12 +83,11 @@ CREATE POLICY "car_images_public_read" ON car_images FOR SELECT USING (true);
 DROP POLICY IF EXISTS "site_settings_public_read" ON site_settings;
 CREATE POLICY "site_settings_public_read" ON site_settings FOR SELECT USING (true);
 
--- Yazma izinleri (Admin işlemler için)
+-- 🔒 Yazma izinleri KALDIRILDI — Artık sadece service_role key yazabilir (RLS bypass)
+-- Aşağıdaki eski politikalar temizleniyor:
 DROP POLICY IF EXISTS "cars_anon_write" ON cars;
-CREATE POLICY "cars_anon_write" ON cars FOR ALL USING (true) WITH CHECK (true);
-
 DROP POLICY IF EXISTS "car_images_anon_write" ON car_images;
-CREATE POLICY "car_images_anon_write" ON car_images FOR ALL USING (true) WITH CHECK (true);
-
 DROP POLICY IF EXISTS "site_settings_anon_write" ON site_settings;
-CREATE POLICY "site_settings_anon_write" ON site_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- NOT: Service role key RLS'yi otomatik bypass ettiği için ayrı bir policy gerekmez.
+-- Tüm yazma işlemleri artık sunucu tarafında SUPABASE_SERVICE_ROLE_KEY ile yapılır.
