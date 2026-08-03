@@ -22,9 +22,8 @@ function formatKm(km: number | string) {
 }
 
 export default function VitrinSection({ cars, whatsappNum }: VitrinSectionProps) {
-  const vitrinCars = cars.filter((c) => c.vitrin && c.durum !== "Pasif");
-  // Eğer özel vitrin seçilmemişse en yeni 3 aktif aracı vitrin yap
-  const displayCars = vitrinCars.length > 0 ? vitrinCars : cars.filter((c) => c.durum === "Aktif").slice(0, 3);
+  // Yalnızca kullanıcının yönetici panelinde açıkça "vitrin: true" işaretlediği araçları göster
+  const displayCars = cars.filter((c) => c.vitrin && c.durum !== "Pasif");
 
   const [activeIndex, setActiveIndex] = useState(0);
 
