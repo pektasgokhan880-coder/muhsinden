@@ -11,7 +11,6 @@ import Hero from "@/components/Hero";
 import VitrinSection from "@/components/VitrinSection";
 import Footer from "@/components/Footer";
 import CarCard, { ContactSection } from "@/components/CarCard";
-import BackgroundMusic from "@/components/BackgroundMusic";
 
 export default function Home() {
   const [cars, setCars] = useState<Car[]>([]);
@@ -412,7 +411,6 @@ export default function Home() {
         </section>
 
         <Footer settings={settings} />
-        <BackgroundMusic title={`${settings?.name || siteConfig.name} Ambient`} />
       </div>
     </main>
   );
