@@ -3,7 +3,6 @@ import {
   ADMIN_SESSION_COOKIE,
   ADMIN_SESSION_VALUE,
   getAdminCredentials,
-  isProductionEnv,
 } from "@/lib/admin-auth";
 
 export async function POST(request: NextRequest) {
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isProd = isProductionEnv();
+    const isProd = process.env.NODE_ENV === "production";
     const redirectTarget = new URL("/admin/panel", request.url);
 
     if (!contentType.includes("application/json")) {
