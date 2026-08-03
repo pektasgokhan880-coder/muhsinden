@@ -58,7 +58,7 @@ function LoginForm() {
           <p className="text-zinc-500 text-sm mt-2">Yönetim paneline giriş</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
           <div>
             <label className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-2 block">
               Kullanıcı Adı
@@ -69,7 +69,7 @@ function LoginForm() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Kullanıcı Adı"
-              autoComplete="username"
+              autoComplete="off"
               required
               className="input w-full"
             />
@@ -85,7 +85,7 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
               className="input w-full"
             />
