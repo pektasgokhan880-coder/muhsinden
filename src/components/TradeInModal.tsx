@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { siteConfig } from "@/lib/site-config";
 
 interface TradeInModalProps {
@@ -9,12 +10,17 @@ interface TradeInModalProps {
 
 export default function TradeInModal({ targetCarTitle }: TradeInModalProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [myCar, setMyCar] = useState({
     markaModel: "",
     yil: "",
     km: "",
     tramer: "",
   });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const sendTradeIn = () => {
     if (!myCar.markaModel) return;
@@ -48,14 +54,14 @@ export default function TradeInModal({ targetCarTitle }: TradeInModalProps) {
         <span>Bu Araç İçin Takas Teklifi Ver</span>
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+      {open && mounted && createPortal(
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+            className="fixed inset-0 bg-black/85 backdrop-blur-xl transition-opacity"
             onClick={() => setOpen(false)}
           />
 
-          <div className="relative z-10 bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-4 text-white max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative z-10 bg-zinc-900 border border-yellow-500/30 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-4 text-white max-h-[85vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
               <h3 className="text-xl font-black text-yellow-500 flex items-center gap-2">
                 <span>🔄</span> Araç Takas Formu
@@ -138,7 +144,8 @@ export default function TradeInModal({ targetCarTitle }: TradeInModalProps) {
               💬 WhatsApp ile Takas Teklifini Gönder
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

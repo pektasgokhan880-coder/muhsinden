@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { deleteCarAction } from "@/lib/actions/car-actions";
 import { toast, dismissToast } from "./Toast";
 import { useRouter } from "next/navigation";
@@ -12,7 +13,12 @@ interface DeleteCarButtonProps {
 export default function DeleteCarButton({ carId }: DeleteCarButtonProps) {
   const [deleting, setDeleting] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleDelete = async () => {
     setShowModal(false);
@@ -49,11 +55,11 @@ export default function DeleteCarButton({ carId }: DeleteCarButtonProps) {
         {deleting ? "Siliniyor..." : "Sil"}
       </button>
 
-      {/* Modern Center Screen Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+      {/* Modern Center Screen Modal via Portal */}
+      {showModal && mounted && createPortal(
+        <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
           <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+            className="fixed inset-0 bg-black/85 backdrop-blur-md transition-opacity"
             onClick={() => setShowModal(false)}
           />
 
@@ -86,7 +92,8 @@ export default function DeleteCarButton({ carId }: DeleteCarButtonProps) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 
 interface LightboxModalProps {
@@ -20,6 +21,12 @@ export default function LightboxModal({
   onNavigate,
   carTitle,
 }: LightboxModalProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const nextImage = useCallback(() => {
     if (!images.length) return;
     onNavigate((currentIndex + 1) % images.length);
@@ -48,10 +55,10 @@ export default function LightboxModal({
     };
   }, [isOpen, onClose, nextImage, prevImage]);
 
-  if (!isOpen || !images.length) return null;
+  if (!isOpen || !images.length || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-between bg-black/95 backdrop-blur-2xl p-4 md:p-6 animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[999999] flex flex-col justify-between bg-black/95 backdrop-blur-2xl p-4 md:p-6 animate-in fade-in duration-200">
       {/* Top Header */}
       <div className="flex justify-between items-center z-10">
         <div>
@@ -109,7 +116,7 @@ export default function LightboxModal({
 
       {/* Bottom Thumbnail Selector */}
       {images.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto py-2 justify-center max-w-4xl mx-auto custom-scrollbar">
+        <div className="flex gap-2 overflow-x-auto py-2 justify-center max-w-4xl mx-auto custom-scrollbar z-10">
           {images.map((img, idx) => (
             <button
               key={idx}
@@ -132,6 +139,7 @@ export default function LightboxModal({
           ))}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
