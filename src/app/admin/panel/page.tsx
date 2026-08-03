@@ -15,7 +15,6 @@ export const revalidate = 0;
 async function sil(formData: FormData) {
   "use server";
 
-  // Çift güvenlik — layout zaten kontrol ediyor, burada da doğrula
   const cookieStore = await cookies();
   const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   if (!isAdminSession(session)) {
@@ -26,7 +25,6 @@ async function sil(formData: FormData) {
   if (!rawId) return;
 
   const id = Number(rawId);
-  let silmeBasarili = false;
 
   try {
     const { data: gallery } = await supabase
@@ -55,23 +53,16 @@ async function sil(formData: FormData) {
     }
 
     await supabase.from("car_images").delete().eq("car_id", id);
-    const { error } = await supabase.from("cars").delete().eq("id", id);
+    await supabase.from("cars").delete().eq("id", id);
 
-    if (!error) silmeBasarili = true;
+    revalidatePath("/admin/panel");
+    revalidatePath("/");
   } catch (err) {
     console.error("Silme hatası:", err);
   }
-
-  if (silmeBasarili) {
-    revalidatePath("/admin/panel");
-    revalidatePath("/");
-  }
-
-  redirect("/admin/panel");
 }
 
 export default async function AdminPanel() {
-  // Layout zaten kontrol ediyor ama burada da çift güvenlik
   const cookieStore = await cookies();
   const auth = cookieStore.get(ADMIN_SESSION_COOKIE);
   if (!isAdminSession(auth?.value)) {
@@ -210,7 +201,6 @@ export default async function AdminPanel() {
                   <AdminCarCardControls
                     carId={car.id}
                     currentStatus={car.durum || "Aktif"}
-                    deleteAction={sil}
                   />
                 </div>
               </div>

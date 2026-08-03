@@ -234,7 +234,9 @@ export default function Duzenle() {
 
       dismissToast(loadingId as string);
       toast("✅ Araç başarıyla güncellendi!", "success");
-      setTimeout(() => router.push("/admin/panel"), 1200);
+      setTimeout(() => {
+        window.location.href = "/admin/panel";
+      }, 1000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Bilinmeyen hata";
       dismissToast(loadingId as string);

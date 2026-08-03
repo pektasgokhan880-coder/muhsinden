@@ -8,13 +8,11 @@ import { toast } from "./Toast";
 interface AdminCarCardControlsProps {
   carId: number;
   currentStatus: string;
-  deleteAction: (formData: FormData) => Promise<void>;
 }
 
 export default function AdminCarCardControls({
   carId,
   currentStatus,
-  deleteAction,
 }: AdminCarCardControlsProps) {
   const [status, setStatus] = useState(currentStatus || "Aktif");
   const [loading, setLoading] = useState(false);
@@ -82,7 +80,9 @@ export default function AdminCarCardControls({
         >
           Düzenle
         </a>
-        <DeleteCarButton carId={carId} deleteAction={deleteAction} />
+        <div className="flex-1">
+          <DeleteCarButton carId={carId} />
+        </div>
       </div>
     </div>
   );

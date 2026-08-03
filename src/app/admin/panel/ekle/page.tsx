@@ -135,7 +135,9 @@ export default function YeniAracEkle() {
 
       dismissToast(loadingId as string);
       toast("✅ Araç başarıyla eklendi!", "success");
-      setTimeout(() => router.push("/admin/panel"), 1200);
+      setTimeout(() => {
+        window.location.href = "/admin/panel";
+      }, 1000);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
       dismissToast(loadingId as string);
