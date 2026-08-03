@@ -68,7 +68,7 @@ function LoginForm() {
               name="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="muhsin34 veya admin"
+              placeholder="Kullanıcı Adı"
               autoComplete="username"
               required
               className="input w-full"
