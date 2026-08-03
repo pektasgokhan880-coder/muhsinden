@@ -5,6 +5,7 @@ import { supabase, storagePathFromUrl } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { toast, dismissToast } from "@/components/Toast";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MAX_IMAGES = 15;
@@ -34,6 +35,7 @@ export default function Duzenle() {
   const id = params.id as string;
   const router = useRouter();
 
+  const [authChecked, setAuthChecked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newFiles, setNewFiles] = useState<File[]>([]);
@@ -56,7 +58,19 @@ export default function Duzenle() {
     aciklama: "",
   });
 
+  // Oturum kontrolü
   useEffect(() => {
+    fetch("/api/admin/check")
+      .then((r) => {
+        if (!r.ok) router.replace("/admin/login");
+        else setAuthChecked(true);
+      })
+      .catch(() => router.replace("/admin/login"));
+  }, [router]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+
     async function aracGetir() {
       setLoading(true);
 
@@ -67,7 +81,7 @@ export default function Duzenle() {
         .single();
 
       if (error || !data) {
-        alert("Araç bulunamadı: " + (error?.message || "Kayıt yok"));
+        toast("Araç bulunamadı: " + (error?.message || "Kayıt yok"), "error");
         router.push("/admin/panel");
         return;
       }
@@ -98,7 +112,7 @@ export default function Duzenle() {
     }
 
     if (id) aracGetir();
-  }, [id, router]);
+  }, [id, router, authChecked]);
 
   function degistir(
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -116,11 +130,11 @@ export default function Duzenle() {
 
     for (const f of list) {
       if (!f.type.startsWith("image/")) {
-        alert(`${f.name}: Sadece resim dosyası yükleyebilirsiniz.`);
+        toast(`${f.name}: Sadece resim dosyası yükleyebilirsiniz.`, "error");
         continue;
       }
       if (f.size > MAX_FILE_SIZE) {
-        alert(`${f.name}: Maksimum 5 MB olmalıdır.`);
+        toast(`${f.name}: Maksimum 5 MB olmalıdır.`, "error");
         continue;
       }
       gecerli.push(f);
@@ -180,11 +194,12 @@ export default function Duzenle() {
 
   async function kaydet() {
     if (!form.marka || !form.model || !form.fiyat) {
-      alert("Marka, Model ve Fiyat zorunludur.");
+      toast("Marka, Model ve Fiyat zorunludur.", "error");
       return;
     }
 
     setSaving(true);
+    const loadingId = toast("Değişiklikler kaydediliyor...", "loading", 0);
 
     try {
       for (const imageId of deletedImageIds) {
@@ -257,23 +272,27 @@ export default function Duzenle() {
       // Blob URL'leri temizle
       newBlobUrls.forEach((u) => URL.revokeObjectURL(u));
 
-      alert("Araç başarıyla güncellendi");
-      router.push("/admin/panel");
+      dismissToast(loadingId as string);
+      toast("✅ Araç başarıyla güncellendi!", "success");
+
+      // Kısa bekleyip panele dön
+      setTimeout(() => router.push("/admin/panel"), 1200);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Bilinmeyen hata";
-      alert(message);
+      dismissToast(loadingId as string);
+      toast(message, "error");
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) {
+  if (!authChecked || loading) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <span className="w-8 h-8 rounded-full border-4 border-yellow-500/20 border-t-yellow-500 animate-spin" />
           <p className="text-yellow-500 font-bold animate-pulse text-sm tracking-wider uppercase">
-            Araç bilgileri yükleniyor...
+            {!authChecked ? "Yükleniyor..." : "Araç bilgileri yükleniyor..."}
           </p>
         </div>
       </main>

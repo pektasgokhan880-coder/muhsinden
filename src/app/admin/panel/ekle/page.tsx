@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, ChangeEvent } from "react";
+import { useState, ChangeEvent, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { toast } from "@/components/Toast";
 
 export default function YeniAracEkle() {
   const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
 
   const [files, setFiles] = useState<File[]>([]);
   const [blobUrls, setBlobUrls] = useState<string[]>([]);
@@ -25,6 +27,16 @@ export default function YeniAracEkle() {
     aciklama: "",
   });
 
+  // Oturum kontrolü — cookie API üzerinden
+  useEffect(() => {
+    fetch("/api/admin/check")
+      .then((r) => {
+        if (!r.ok) router.replace("/admin/login");
+        else setAuthChecked(true);
+      })
+      .catch(() => router.replace("/admin/login"));
+  }, [router]);
+
   function degistir(
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) {
@@ -39,11 +51,11 @@ export default function YeniAracEkle() {
     const gecerli: File[] = [];
     for (const f of secilenler) {
       if (!f.type.startsWith("image/")) {
-        alert(f.name + ": Sadece resim yükleyin.");
+        toast(f.name + ": Sadece resim yükleyin.", "error");
         continue;
       }
       if (f.size > MAX) {
-        alert(f.name + ": Maksimum 5 MB.");
+        toast(f.name + ": Maksimum 5 MB olabilir.", "error");
         continue;
       }
       gecerli.push(f);
@@ -70,16 +82,17 @@ export default function YeniAracEkle() {
 
   async function kaydet() {
     if (!form.marka || !form.model || !form.fiyat) {
-      alert("Lütfen Marka, Model ve Fiyat alanlarını doldurun.");
+      toast("Lütfen Marka, Model ve Fiyat alanlarını doldurun.", "error");
       return;
     }
 
     if (files.length === 0) {
-      alert("Lütfen en az 1 adet araç fotoğrafı seçin.");
+      toast("Lütfen en az 1 adet araç fotoğrafı seçin.", "error");
       return;
     }
 
     setLoading(true);
+    const loadingId = toast("Fotoğraflar ve ilan yükleniyor...", "loading", 0);
 
     try {
       const yuklenen: string[] = [];
@@ -144,15 +157,40 @@ export default function YeniAracEkle() {
       // Blob URL'leri temizle
       blobUrls.forEach((u) => URL.revokeObjectURL(u));
 
-      alert("Araç başarıyla eklendi!");
-      router.push("/admin/panel");
+      // Loading toast'ı kapat, başarı bildirimi göster
+      if (loadingId) {
+        const { dismissToast } = await import("@/components/Toast");
+        dismissToast(loadingId);
+      }
+      toast("✅ Araç başarıyla eklendi!", "success");
+
+      // Kısa bekleyip panele dön
+      setTimeout(() => router.push("/admin/panel"), 1200);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
-      alert(message);
+      if (loadingId) {
+        const { dismissToast } = await import("@/components/Toast");
+        dismissToast(loadingId);
+      }
+      toast(message, "error");
     } finally {
       setLoading(false);
     }
+  }
+
+  // Auth kontrol edilmeden önce boş sayfa göster
+  if (!authChecked) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <span className="w-8 h-8 rounded-full border-4 border-yellow-500/20 border-t-yellow-500 animate-spin" />
+          <p className="text-yellow-500 font-bold text-sm tracking-widest uppercase">
+            Yükleniyor...
+          </p>
+        </div>
+      </main>
+    );
   }
 
   return (

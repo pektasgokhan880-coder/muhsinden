@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toggleCarStatusAction } from "@/lib/actions/car-actions";
 import DeleteCarButton from "./DeleteCarButton";
+import { toast } from "./Toast";
 
 interface AdminCarCardControlsProps {
   carId: number;
@@ -24,7 +25,7 @@ export default function AdminCarCardControls({
     setStatus(newStatus);
     const res = await toggleCarStatusAction(carId, newStatus);
     if (!res.success) {
-      alert("Hata: " + res.error);
+      toast("Hata: " + res.error, "error");
       setStatus(currentStatus);
     }
     setLoading(false);

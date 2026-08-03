@@ -75,15 +75,15 @@ img {
   height: auto;
 }
 
-/* Toast slide-in animation */
+/* Toast slide-in animation — sol alttan yukarı gelir */
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(-20px) scale(0.95);
+    transform: translateY(16px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
