@@ -10,7 +10,6 @@ import PriceCard from "@/components/PriceCard";
 import SpecsGrid from "@/components/SpecsGrid";
 import CarFeatures from "@/components/CarFeatures";
 import Footer from "@/components/Footer";
-import LoanCalculator from "@/components/LoanCalculator";
 import TradeInModal from "@/components/TradeInModal";
 
 type Props = {
@@ -116,9 +115,6 @@ export default async function Page({ params }: Props) {
                 {car.aciklama || "Araç hakkında detaylı açıklama bulunmuyor."}
               </p>
             </div>
-
-            {/* Loan Calculator */}
-            <LoanCalculator carPrice={car.fiyat || 0} />
           </div>
 
           {/* Sticky Sidebar */}

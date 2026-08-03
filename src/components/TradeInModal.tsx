@@ -49,7 +49,7 @@ export default function TradeInModal({ targetCarTitle }: TradeInModalProps) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5">
             <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
               <h3 className="text-xl font-black text-yellow-500 flex items-center gap-2">

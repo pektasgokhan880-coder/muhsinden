@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { siteConfig, whatsappUrl } from "@/lib/site-config";
 import { useFavorites } from "@/context/FavoritesContext";
+import SellCarModal from "./SellCarModal";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,7 +41,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-7 font-bold text-zinc-300 text-sm">
+        <div className="hidden md:flex items-center gap-6 font-bold text-zinc-300 text-sm">
           <Link href="/#anasayfa" className="hover:text-yellow-500 transition">
             Ana Sayfa
           </Link>
@@ -58,21 +59,27 @@ export default function Navbar() {
           <Link href="/#iletisim" className="hover:text-yellow-500 transition">
             İletişim
           </Link>
+
+          {/* Sell Car Button */}
+          <SellCarModal />
+
           <a
             href={whatsappUrl()}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-green-500 hover:bg-green-400 text-black px-5 py-2.5 rounded-xl font-black transition shadow-lg shadow-green-500/20 active:scale-95"
+            className="bg-green-500 hover:bg-green-400 text-black px-4 py-2 rounded-xl font-black transition shadow-lg shadow-green-500/20 active:scale-95 text-xs"
           >
             WhatsApp
           </a>
         </div>
 
         {/* Mobile menu button */}
-        <div className="flex items-center gap-3 md:hidden">
+        <div className="flex items-center gap-2.5 md:hidden">
+          <SellCarModal />
+
           <Link
             href="/favoriler"
-            className="relative bg-zinc-900 border border-zinc-800 p-2.5 rounded-xl text-yellow-500"
+            className="relative bg-zinc-900 border border-zinc-800 p-2 rounded-xl text-yellow-500"
             aria-label="Favoriler"
           >
             <span>❤️</span>

@@ -6,7 +6,6 @@ import { Car } from "@/types/car";
 import Image from "next/image";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
-import StatsSection from "@/components/StatsSection";
 import Footer from "@/components/Footer";
 import CarCard, { ContactSection } from "@/components/CarCard";
 
@@ -167,7 +166,6 @@ export default function Home() {
       <div className="relative z-10">
         <Navbar />
         <Hero />
-        <StatsSection />
 
         {!isSupabaseConfigured() && (
           <div className="max-w-4xl mx-auto px-5 md:px-6 -mt-4 mb-8">
